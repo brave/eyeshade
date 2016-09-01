@@ -1,0 +1,78 @@
+{
+  "name": "eyeshade",
+  "version": "0.8.57",
+  "description": "Brave Internal Accounting server.",
+  "main": "index.js",
+  "scripts": {
+    "lint": "gulp lint",
+    "server": "./node_modules/.bin/babel-node src/index.js",
+    "start": "DEBUG=*,-babel,-mongo:*,mongo:queries ./node_modules/.bin/babel-node src/index.js",
+    "test": "npm run test-security",
+    "test-security": "nsp check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brave/eyeshade.git"
+  },
+  "author": "Brave Developers <support@brave.com>",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/brave/eyeshade/issues"
+  },
+  "homepage": "https://github.com/brave/eyeshade",
+  "dependencies": {
+    "babel-cli": "^6.1.2",
+    "babel-preset-stage-2": "^6.1.2",
+    "bell": "6.0.0",
+    "bitcoinjs-lib": "^2.2.0",
+    "bitgo": "^1.8.0",
+    "blipp": "2.3.0",
+    "boom": "3.0.0",
+    "bs58check": "^1.0.5",
+    "bson": "0.4.19",
+    "crumb": "6.0.0",
+    "cryptiles": "3.0.0",
+    "currency-codes": "1.1.2",
+    "dateformat": "1.0.12",
+    "github": "0.2.4",
+    "hapi": "^12.1.0",
+    "hapi-async-handler": "^1.0.3",
+    "hapi-auth-cookie": "3.1.0",
+    "hapi-swagger": "^6.1.0",
+    "inert": "^3.2.0",
+    "joi": "^9.0.0-2",
+    "json2csv": "^3.6.2",
+    "ledger-publisher": "^0.8.57",
+    "mongodb": "1.4.39",
+    "monk": "https://github.com/brave/monk.git",
+    "newrelic": "1.23.1",
+    "node-uuid": "1.4.7",
+    "rsmq": "^0.7.0",
+    "rsmq-worker": "^0.4.1",
+    "sdebug": "^0.9.0",
+    "underscore": "1.8.3",
+    "vision": "^4.0.0",
+    "whois-json": "1.0.1",
+    "wreck": "7.0.0"
+  },
+  "engines": {
+    "node": "5.6.0",
+    "npm": "3.6.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^4.1.3",
+    "babel-polyfill": "^6.0.16",
+    "code": "2.0.1",
+    "del": "^2.0.2",
+    "gulp": "^3.9.0",
+    "gulp-nodemon": "^2.0.3",
+    "gulp-shell": "^0.5.1",
+    "gulp-standard": "^5.2.2",
+    "nsp": "^2.2.0",
+    "rsmq-cli": "^0.1.1",
+    "run-sequence": "^1.1.0"
+  },
+  "standard": {
+    "parser": "babel-eslint"
+  }
+}
