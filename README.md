@@ -1,8 +1,10 @@
 # Brave Eyeshade
-The Brave Eyeshade is the accounting server for the
+** NB: this repository is still undergoing active functional development.**
+
+The Brave Eyeshade is the back-end accountant for the
 [Brave Ledger](https://github.com/brave/ledger/tree/master/documentation/Ledger-Principles.md).
 
-Note that [travis-ci](https://travis-ci.org/brave/ledger) is not yet operational for this repository.
+Note that [travis-ci](https://travis-ci.org/brave/eyeshade) is not yet operational for this repository.
 
 <img src='documentation/ecosystem.png' />
 
@@ -23,8 +25,6 @@ Now start the server with `npm start` and `https://{DOMAIN:PORT}/v1/login` which
 process.
 On success,
 you will be redirected to `https://{DOMAIN:PORT}/documentation`.
-
-__TBD__
 
 # Setup
 Clone the repo: `git clone git@github.com:brave/eyeshade.git`
