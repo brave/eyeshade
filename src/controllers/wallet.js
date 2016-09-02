@@ -10,7 +10,8 @@ module.exports.initialize = async function (debug, runtime) {
   [ { category: runtime.db.get('wallets', debug),
       name: 'wallets',
       property: 'paymentId',
-      empty: { paymentId: '', address: '', provider: '', keychains: {}, paymentStamp: 0, timestamp: bson.Timestamp.ZERO },
+      empty: { paymentId: '', address: '', provider: '', balances: {}, keychains: {}, paymentStamp: 0,
+               timestamp: bson.Timestamp.ZERO },
       unique: [ { paymentId: 0 } ],
       others: [ { address: 0 }, { provider: 1 }, { paymentStamp: 1 }, { timestamp: 1 } ]
     },
@@ -167,7 +168,7 @@ module.exports.initialize = async function (debug, runtime) {
       }
 
       try { await report() } catch (ex) {
-        debug('walletUpdate', { payload: payload, err: ex, stack: ex.stack })
+        debug('contribution-report', { payload: payload, err: ex, stack: ex.stack })
         runtime.newrelic.noticeError(ex, payload)
       }
       runtime.newrelic.endTransaction()
@@ -208,6 +209,42 @@ module.exports.initialize = async function (debug, runtime) {
 
       try { await report() } catch (ex) {
         debug('voting-report', { payload: payload, err: ex, stack: ex.stack })
+        runtime.newrelic.noticeError(ex, payload)
+      }
+      runtime.newrelic.endTransaction()
+    })
+  )
+
+  await runtime.queue.create('wallet-report')
+  runtime.queue.listen('wallet-report',
+    runtime.newrelic.createBackgroundTransaction('wallet-report', async function (err, debug, payload) {
+/* sent when the wallet balance updates
+
+    { queue            : 'wallet-report'
+    , message          :
+      { paymentId      : '...'
+      , balances       : { ... }
+      }
+    }
+ */
+
+      var report
+
+      if (err) return debug('wallet-report listen', err)
+
+      report = async function () {
+        var state
+        var paymentId = payload.paymentId
+        var wallets = runtime.db.get('wallets', debug)
+
+        state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+                  $set: { balances: payload.balances }
+                }
+        await wallets.update({ paymentId: paymentId }, state, { upsert: true })
+      }
+
+      try { await report() } catch (ex) {
+        debug('wallet-report', { payload: payload, err: ex, stack: ex.stack })
         runtime.newrelic.noticeError(ex, payload)
       }
       runtime.newrelic.endTransaction()
