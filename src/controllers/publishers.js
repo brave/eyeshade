@@ -5,6 +5,8 @@ var bson = require('bson')
 var crypto = require('crypto')
 var dns = require('dns')
 var Joi = require('joi')
+var ledgerPublisher = require('ledger-publisher')
+var underscore = require('underscore')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
@@ -114,6 +116,66 @@ v1.write_hmac =
 }
 
 /*
+   POST /v1/publishers/prune
+ */
+
+v1.prune =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var results, state, votes
+    var debug = braveHapi.debug(module, request)
+    var voting = runtime.db.get('voting', debug)
+
+    votes = await voting.aggregate([
+        { $match: { counts: { $gt: 0 },
+                    exclude: false
+                  }
+        },
+        { $group: { _id: '$publisher' } },
+        { $project: { _id: 1 } }
+    ])
+
+    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+              $set: { exclude: true }
+            }
+
+    results = []
+    votes.forEach(async function (entry) {
+      var publisher = entry._id
+      var result
+
+      try {
+        result = ledgerPublisher.getPublisher('https://' + publisher)
+        if (result) return
+      } catch (err) {
+        return debug('prune', underscore.defaults({ publisher: publisher }, err))
+      }
+
+      results.push(publisher)
+      await voting.update({ publisher: publisher }, state, { upsert: true })
+    })
+
+    reply(results)
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Prunes votes corresponding to pruned publishers',
+  tags: [ 'api' ],
+
+  validate:
+    { query: {} },
+
+  response:
+    { schema: Joi.array().min(0) }
+}
+
+/*
    GET /v1/publishers/verify
  */
 
@@ -195,6 +257,7 @@ v1.verify =
 module.exports.routes = [
   braveHapi.routes.async().path('/v1/publishers/hmac').config(v1.read_hmac),
   braveHapi.routes.async().post().path('/v1/publishers/hmac').config(v1.write_hmac),
+  braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
   braveHapi.routes.async().path('/v1/publishers/txt').config(v1.txt),
   braveHapi.routes.async().path('/v1/publishers/verify').config(v1.verify)
 ]

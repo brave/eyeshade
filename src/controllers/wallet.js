@@ -37,10 +37,13 @@ module.exports.initialize = async function (debug, runtime) {
       name: 'voting',
       property: 'surveyorId_0_publisher',
       empty: { surveyorId: '', publisher: '', counts: 0, timestamp: bson.Timestamp.ZERO,
+      // added by administrator
+               exclude: false,
       // added during report runs...
                satoshis: 0 },
       unique: [ { surveyorId: 0, publisher: 1 } ],
       others: [ { counts: 1 }, { timestamp: 1 },
+                { exclude: 1 },
                 { satoshis: 1 } ]
     }
   ])
@@ -197,9 +200,10 @@ module.exports.initialize = async function (debug, runtime) {
         if (!publisher) throw new Error('no publisher specified')
 
         state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-                  $inc: { counts: 1 }
+                  $inc: { counts: 1 },
+                  $set: { exclude: false }
                 }
-        await voting.update({ surveyorId: surveyorId, publisher: publisher }, state, { upsert: true })
+        await voting.updateMany({ surveyorId: surveyorId, publisher: publisher }, state)
       }
 
       try { await report() } catch (ex) {

@@ -178,7 +178,11 @@ var quanta = async function (debug, runtime) {
     }
   ])
   votes = await voting.aggregate([
-      { $match: { counts: { $gt: 0 } } },
+      { $match:
+        { counts: { $gt: 0 },
+          exclude: false
+        }
+      },
       { $group:
         { _id: '$surveyorId',
           counts: { $sum: '$counts' }
