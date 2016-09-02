@@ -21,7 +21,7 @@ v1.publishers =
 
     var slicer = async function (quantum) {
       var counts, fees, i, satoshis, slice, state
-      var slices = await voting.find({ surveyorId: quantum.surveyorId })
+      var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
 
       counts = 0
       for (i = 0; i < slices.length; i++) {
