@@ -73,7 +73,9 @@ v1.publishers =
   tags: [ 'api' ],
 
   validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().description('the format of the response') } },
+    { query: { format: Joi.string().valid('json', 'csv').optional().default('json').description(
+                         'the format of the response'
+                       ) } },
 
   response:
     { schema: Joi.alternatives().try(Joi.array().min(0).items(Joi.object().keys().unknown(true)), Joi.string()) }
@@ -115,7 +117,9 @@ v1.surveyors =
   tags: [ 'api' ],
 
   validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().description('the format of the response') } },
+    { query: { format: Joi.string().valid('json', 'csv').optional().default('json').description(
+                         'the format of the response'
+                       ) } },
 
   response:
     { schema: Joi.alternatives().try(Joi.array().min(0).items(Joi.object().keys().unknown(true)), Joi.string()) }
