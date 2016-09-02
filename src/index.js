@@ -197,7 +197,7 @@ var main = async function () {
       port: runtime.config.port,
       version: server.version,
       env: underscore.pick(process.env, [ 'BITGO_ENVIRONMENT', 'DEBUG', 'DYNO', 'NEW_RELIC_APP_NAME', 'NODE_ENV' ]),
-      k: underscore.keys(env)
+      k: underscore.keys(process.env)
     })
 
     runtime.npminfo = underscore.pick(npminfo, 'name', 'version', 'description', 'author', 'license', 'bugs', 'homepage')
