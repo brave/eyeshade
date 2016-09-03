@@ -17,6 +17,7 @@ v1.publishers =
     var data, i, publishers, results
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'json'
+    var summaryP = request.query.summary
     var voting = runtime.db.get('voting', debug)
 
     var slicer = async function (quantum) {
@@ -57,7 +58,7 @@ v1.publishers =
     data = []
     results.forEach((result) => {
       data.push({ publisher: result.publisher, total: result.satoshis, fees: result.fees })
-      result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
+      if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
     })
     reply(json2csv({ data: data })).type('text/csv')
   }
@@ -75,7 +76,9 @@ v1.publishers =
   validate:
     { query: { format: Joi.string().valid('json', 'csv').optional().default('json').description(
                          'the format of the response'
-                       ) } },
+                       ),
+               summary: Joi.boolean().optional().default(false).description('summarize results (CSV only)')
+              } },
 
   response:
     { schema: Joi.alternatives().try(Joi.array().min(0).items(Joi.object().keys().unknown(true)), Joi.string()) }
