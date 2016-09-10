@@ -18,12 +18,12 @@ module.exports.initialize = async function (debug, runtime) {
     { category: runtime.db.get('surveyors', debug),
       name: 'surveyors',
       property: 'surveyorId',
-      empty: { surveyorId: '', surveyorType: '', satoshis: 0, votes: 0, timestamp: bson.Timestamp.ZERO,
+      empty: { surveyorId: '', surveyorType: '', satoshis: 0, votes: 0, counts: 0, timestamp: bson.Timestamp.ZERO,
       // added during report runs...
-               counts: 0, inputs: 0, fee: 0, quantum: 0 },
+               inputs: 0, fee: 0, quantum: 0 },
       unique: [ { surveyorId: 0 } ],
-      others: [ { surveyorType: 1 }, { satoshis: 1 }, { votes: 1 }, { timestamp: 1 },
-                { counts: 1 }, { inputs: 1 }, { fee: 1 }, { quantum: 1 } ]
+      others: [ { surveyorType: 1 }, { satoshis: 1 }, { votes: 1 }, { counts: 1 }, { timestamp: 1 },
+                { inputs: 1 }, { fee: 1 }, { quantum: 1 } ]
     },
     { category: runtime.db.get('contributions', debug),
       name: 'contributions',
@@ -115,7 +115,7 @@ module.exports.initialize = async function (debug, runtime) {
         var surveyors = runtime.db.get('surveyors', debug)
 
         state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-                  $set: underscore.omit(payload, [ 'surveyorId' ])
+                  $set: underscore.extend({ counts: 0 }, underscore.omit(payload, [ 'surveyorId' ]))
                 }
         await surveyors.update({ surveyorId: surveyorId }, state, { upsert: true })
       }
