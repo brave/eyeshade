@@ -152,7 +152,7 @@ v1.prune =
       }
 
       results.push(publisher)
-      await voting.update({ publisher: publisher }, state, { upsert: true })
+      await voting.deleteMany({ publisher: publisher })
     })
 
     reply(results)
