@@ -204,7 +204,7 @@ module.exports.initialize = async function (debug, runtime) {
                   $inc: { counts: 1 },
                   $set: { exclude: false }
                 }
-        await voting.updateMany({ surveyorId: surveyorId, publisher: publisher }, state)
+        await voting.update({ surveyorId: surveyorId, publisher: publisher }, state, { upsert: true })
       }
 
       try { await report() } catch (ex) {
