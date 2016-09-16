@@ -10,7 +10,7 @@ module.exports =
     }
   }
 , login             :
-  { organization    : '...'
+  { organization    : ''
   , world           : '/documentation'
   , bye             : 'https://example.com'
   , clientId        : process.env.GITHUB_CLIENT_ID || '00000000000000000000'

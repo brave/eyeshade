@@ -6,11 +6,11 @@ module.exports =
   { rsmq            : process.env.REDIS_URL || 'localhost:6379' }
 , wallet            :
   { bitgo           :
-    { environment   : process.env.BITGO_ENVIRONMENT || '...'
+    { environment   : process.env.BITGO_ENVIRONMENT
     }
   }
 , login             :
-  { organization    : '...'
+  { organization    : ''
   , world           : '/documentation'
   , bye             : 'https://example.com'
   , clientId        : process.env.GITHUB_CLIENT_ID
