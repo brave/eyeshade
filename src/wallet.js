@@ -3,7 +3,7 @@ var debug = new (require('sdebug'))('wallet')
 var Joi = require('joi')
 var underscore = require('underscore')
 
-var Wallet = function (config) {
+var Wallet = function (config, runtime) {
   if (!(this instanceof Wallet)) return new Wallet(config)
 
   if (!config.wallet) throw new Error('config.wallet undefined')
@@ -11,6 +11,7 @@ var Wallet = function (config) {
   if (!config.wallet.bitgo) config.wallet = { bitgo: config.wallet }
   this.config = config.wallet
   this.config.environment = config.wallet.bitgo.environment
+  this.runtime = runtime
   this.bitgo = new (require('bitgo')).BitGo({ accessToken: config.wallet.bitgo.accessToken,
                                               env: config.wallet.bitgo.environment || 'prod' })
   debug('environment: ' + this.config.environment)
@@ -76,6 +77,13 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
   return f.bind(this)(info, amount, currency)
 }
 
+Wallet.prototype.recover = async function (info, original, passphrase) {
+  var f = Wallet.providers[info.provider].recover
+
+  if (!f) throw new Error('provider ' + info.provider + ' recover not supported')
+  return await f.bind(this)(info, original, passphrase)
+}
+
 Wallet.prototype.submitTx = async function (info, signedTx) {
   var f = Wallet.providers[info.provider].submitTx
 
@@ -138,6 +146,23 @@ Wallet.providers.bitgo = {
            }
   },
 
+  recover: async function (info, original, passphrase) {
+    var amount, fee
+    var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: original.address })
+
+    amount = wallet.balance()
+    try {
+      // NB: this should always throw!
+      await wallet.sendCoins({ address: info.address, amount: amount, walletPassphrase: passphrase })
+    } catch (ex) {
+      fee = ex.result && ex.result.fee
+      if (!fee) throw ex
+
+      amount -= fee
+      await wallet.sendCoins({ address: info.address, amount: amount, walletPassphrase: passphrase, fee: fee })
+    }
+  },
+
   submitTx: async function (info, signedTx) {
     var details, i, result
     var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: info.address })
@@ -195,6 +220,7 @@ Wallet.providers.bitgo = {
         debug('unsignedTx', { satoshis: desired, estimate: fee, actual: transaction.fee })
       } catch (ex) {
         debug('createTransaction', ex)
+        this.runtime.newrelic.noticeError(ex, { recipients: recipients, feeRate: estimate.feePerKb })
         return
       }
       if (fee <= transaction.fee) break
