@@ -65,12 +65,11 @@ v1.publishers =
       satoshis += result.satoshis
       fees += result.fees
       data.push({ publisher: result.publisher, total: result.satoshis, fees: result.fees,
-                  'publisher USD': Math.toFixed(usd * result.satoshis, 2),
-                   'processor USD': Math.toFixed(usd * result.fees, 2) })
+                  'publisher USD': (result.satoshis * usd).toFixed(2), 'processor USD': (result.fees * usd).toFixed(2) })
       if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
     })
     data.push({ publisher: 'TOTAL', total: satoshis, fees: fees,
-                'publisher USD': Math.toFixed(usd * satoshis, 2), 'processor USD': Math.toFixed(usd * fees, 2) })
+                'publisher USD': (satoshis * usd).toFixed(2), 'processor USD': (fees * usd).toFixed(2) })
 
     reply(json2csv({ data: data })).type('text/csv')
   }
