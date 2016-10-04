@@ -14,7 +14,7 @@ var v1 = {}
 v1.publishers =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, i, publishers, results
+    var data, fees, i, publishers, results, satoshis, usd
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'json'
     var summaryP = request.query.summary
@@ -55,11 +55,22 @@ v1.publishers =
     results = underscore.sortBy(results, 'publisher')
     if (format !== 'csv') return reply(results)
 
+    usd = runtime.wallet.rates.USD
+    if (!Number.isFinite(usd)) usd = null
+    satoshis = 0
+    fees = 0
+
     data = []
     results.forEach((result) => {
-      data.push({ publisher: result.publisher, total: result.satoshis, fees: result.fees })
+      satoshis += result.satoshis
+      fees += result.fees
+      data.push({ publisher: result.publisher, total: result.satoshis, fees: result.fees,
+                  'publisher USD': Math.round(usd * result.satoshis, 2), 'processor USD': Math.round(usd * result.fees, 2) })
       if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
     })
+    data.push({ publisher: 'TOTAL', total: satoshis, fees: fees,
+                'publisher USD': Math.round(usd * satoshis, 2), 'processor USD': Math.round(usd * fees, 2) })
+
     reply(json2csv({ data: data })).type('text/csv')
   }
 },

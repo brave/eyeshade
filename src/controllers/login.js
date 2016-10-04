@@ -2,6 +2,8 @@ var boom = require('boom')
 var braveHapi = require('../brave-hapi')
 var GitHub = require('github')
 var Joi = require('joi')
+var Netmask = require('netmask').Netmask
+var underscore = require('underscore')
 
 var v1 = {}
 
@@ -80,7 +82,35 @@ v1.logout =
     { query: {} }
 }
 
+var authorized = process.env.AUTHORIZED_IPMASKS && process.env.AUTHORIZED_IPMASKS.split(',')
+if (authorized) {
+  var authorizedAddrs = [ '127.0.0.1' ]
+  var authorizedBlocks = []
+
+  authorized.forEach((entry) => {
+    if ((entry.indexOf('/') !== -1) || (entry.split('.').length !== 4)) return authorizedBlocks.push(new Netmask(entry))
+
+    authorizedAddrs.push(entry)
+  })
+}
+
+var extras = {
+  ext: {
+    onPreAuth: {
+      method: function (request, reply) {
+        var ipaddr = request.info.remoteAddress
+
+        if ((!authorizedAddrs) ||
+              (authorizedAddrs.indexOf(ipaddr) !== -1) ||
+              (underscore.find(authorizedBlocks, (block) => { block.contains(ipaddr) }))) return reply.continue()
+
+        return reply(boom.notAcceptable())
+      }
+    }
+  }
+}
+
 module.exports.routes = [
-  braveHapi.routes.async().path('/v1/login').config(v1.login),
+  braveHapi.routes.async().path('/v1/login').extras(extras).config(v1.login),
   braveHapi.routes.async().path('/v1/logout').config(v1.logout)
 ]

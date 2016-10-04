@@ -1,6 +1,6 @@
 {
   "name": "eyeshade",
-  "version": "0.8.85",
+  "version": "0.8.86",
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
@@ -45,6 +45,7 @@
     "ledger-publisher": "^0.8.75",
     "mongodb": "1.4.39",
     "monk": "https://github.com/brave/monk.git",
+    "netmask": "1.0.6",
     "newrelic": "1.23.1",
     "node-uuid": "1.4.7",
     "rsmq": "^0.7.0",
