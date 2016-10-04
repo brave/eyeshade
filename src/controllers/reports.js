@@ -56,7 +56,7 @@ v1.publishers =
     if (format !== 'csv') return reply(results)
 
     usd = runtime.wallet.rates.USD
-    if (!Number.isFinite(usd)) usd = null
+    usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
     satoshis = 0
     fees = 0
 
