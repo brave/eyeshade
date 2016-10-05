@@ -82,12 +82,12 @@ v1.logout =
     { query: {} }
 }
 
-var authorized = process.env.AUTHORIZED_IPMASKS && process.env.AUTHORIZED_IPMASKS.split(',')
-if (authorized) {
+var whitelist = process.env.IP_WHITELIST && process.env.IP_WHITELIST.split(',')
+if (whitelist) {
   var authorizedAddrs = [ '127.0.0.1' ]
   var authorizedBlocks = []
 
-  authorized.forEach((entry) => {
+  whitelist.forEach((entry) => {
     if ((entry.indexOf('/') !== -1) || (entry.split('.').length !== 4)) return authorizedBlocks.push(new Netmask(entry))
 
     authorizedAddrs.push(entry)
