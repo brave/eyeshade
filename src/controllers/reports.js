@@ -6,6 +6,7 @@ var json2csv = require('json2csv')
 var underscore = require('underscore')
 
 var v1 = {}
+var datefmt = 'yyyy-mm-dd HH:MM:ss'
 
 /*
    GET /v1/reports/publishers
@@ -14,7 +15,7 @@ var v1 = {}
 v1.publishers =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, fees, i, publishers, results, satoshis, usd
+    var data, fees, filename, i, publishers, results, satoshis, usd
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'json'
     var summaryP = request.query.summary
@@ -71,7 +72,8 @@ v1.publishers =
     data.push({ publisher: 'TOTAL', total: satoshis, fees: fees,
                 'publisher USD': (satoshis * usd).toFixed(2), 'processor USD': (fees * usd).toFixed(2) })
 
-    reply(json2csv({ data: data })).type('text/csv')
+    filename = 'surveyors-' + dateformat(underscore.now(), datefmt) + '.csv'
+    reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename=' + filename)
   }
 },
 
@@ -98,7 +100,7 @@ v1.publishers =
 v1.surveyors =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var datefmt = 'yyyy-mm-dd HH:MM:ss'
+    var filename
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'json'
     var results = await quanta(debug, runtime)
@@ -110,14 +112,9 @@ v1.surveyors =
       underscore.extend(result,
                         { created: dateformat(result.created, datefmt), modified: dateformat(result.modified, datefmt) })
     })
-/* perhaps in the future include a header like this
 
-     Content-Disposition: attachment; filename=...
-
-  if request.headers.referer doesn't end in '/documentation'
- */
-
-    reply(json2csv({ data: results })).type('text/csv')
+    filename = 'surveyors-' + dateformat(underscore.now(), datefmt) + '.csv'
+    reply(json2csv({ data: results })).type('text/csv').header('content-disposition', 'attachment; filename=' + filename)
   }
 },
 
