@@ -79,7 +79,7 @@ v1.prune =
 v1.getBalance =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var amount, summary
+    var amount, rate, satoshis, summary
     var publisher = request.params.publisher
     var currency = request.query.currency
     var debug = braveHapi.debug(module, request)
@@ -98,10 +98,11 @@ v1.getBalance =
         }
       }
     ])
-    console.log(JSON.stringify(summary, null, 2))
+    satoshis = summary[0].satoshis
 
-    amount = 0
-    reply({ amount: amount, currency: currency })
+    rate = runtime.wallet.rates[currency.toUpperCase()]
+    if (rate) amount = Math.round((satoshis / rate) / 1e8)
+    reply({ amount: amount, currency: currency, satoshis: satoshis })
   }
 },
 
@@ -116,7 +117,8 @@ v1.getBalance =
   response:
     { schema: Joi.object().keys(
       { amount: Joi.number().min(0).optional().description('the balance in the payment currency'),
-        currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency')
+        currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency'),
+        satoshis: Joi.number().integer().min(0).optional().description('the balance in satoshis')
       })
     }
 }
