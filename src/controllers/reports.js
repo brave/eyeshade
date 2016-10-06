@@ -72,8 +72,8 @@ v1.publishers =
     data.push({ publisher: 'TOTAL', total: satoshis, fees: fees,
                 'publisher USD': (satoshis * usd).toFixed(2), 'processor USD': (fees * usd).toFixed(2) })
 
-    filename = 'surveyors-' + dateformat(underscore.now(), datefmt) + '.csv'
-    reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename=' + filename)
+    filename = 'publishers-' + dateformat(underscore.now(), datefmt) + '.csv'
+    reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename="' + filename + '"')
   }
 },
 
@@ -114,7 +114,7 @@ v1.surveyors =
     })
 
     filename = 'surveyors-' + dateformat(underscore.now(), datefmt) + '.csv'
-    reply(json2csv({ data: results })).type('text/csv').header('content-disposition', 'attachment; filename=' + filename)
+    reply(json2csv({ data: results })).type('text/csv').header('content-disposition', 'attachment; filename="' + filename + '"')
   }
 },
 
