@@ -1,6 +1,6 @@
 {
   "name": "eyeshade",
-  "version": "0.8.87",
+  "version": "0.8.88",
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
