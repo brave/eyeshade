@@ -73,6 +73,55 @@ v1.prune =
 }
 
 /*
+   GET /v1/publishers/{publisher}/balance
+ */
+
+v1.getBalance =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var amount, summary
+    var publisher = request.params.publisher
+    var currency = request.query.currency
+    var debug = braveHapi.debug(module, request)
+    var voting = runtime.db.get('voting', debug)
+
+    summary = await voting.aggregate([
+      { $match:
+        { satoshis: { $gt: 0 },
+          publisher: { $eq: publisher },
+          exclude: false
+        }
+      },
+      { $group:
+        { _id: '$publisher',
+          satoshis: { $sum: '$satoshis' }
+        }
+      }
+    ])
+    console.log(JSON.stringify(summary, null, 2))
+
+    amount = 0
+    reply({ amount: amount, currency: currency })
+  }
+},
+
+  description: 'Gets a verification token for a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency') }
+    },
+
+  response:
+    { schema: Joi.object().keys(
+      { amount: Joi.number().min(0).optional().description('the balance in the payment currency'),
+        currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency')
+      })
+    }
+}
+
+/*
    GET /v1/publishers/{publisher}/verifications/{verificationId}
  */
 
@@ -276,6 +325,7 @@ module.exports.notify =
 
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
+  braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').config(v1.setWallet),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken)
