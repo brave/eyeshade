@@ -19,8 +19,6 @@ var publisherBase = process.env.PUBLISHER_URI_BASE || 'https://publishers.brave.
 v1.prune =
 { handler: function (runtime) {
   return async function (request, reply) {
-console.log(require('json-stringify-safe')(request.auth.credentials, null, 2))
-console.log(require('json-stringify-safe')(request.raw.req, null, 2))
     var results, state, votes
     var debug = braveHapi.debug(module, request)
     var voting = runtime.db.get('voting', debug)
@@ -138,6 +136,8 @@ v1.getToken =
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
+console.log(require('json-stringify-safe')(request.auth.credentials, null, 2))
+console.log(require('json-stringify-safe')(request.raw.req, null, 2))
     entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
     if (entry) return reply({ token: entry.token })
 
