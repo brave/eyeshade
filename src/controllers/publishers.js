@@ -12,110 +12,6 @@ var v1 = {}
 var prefix = 'brave-ledger-verification='
 
 /*
-   GET /v1/publishers/txt
- */
-
-v1.txt =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var value
-    var btcAddress = request.query.btcAddress
-    var hmacSecret = request.query.hmacSecret
-
-    value = crypto.createHmac('sha384', new Buffer(hmacSecret, 'hex').toString('binary')).update(btcAddress).digest('hex')
-
-    reply('. IN TXT "' + prefix + value + '"')
-  }
-},
-
-  description: 'Returns a TXT record',
-  tags: [ 'api' ],
-
-  validate:
-    { query:
-      { btcAddress: braveJoi.string().base58().required().description('BTC address'),
-        hmacSecret: Joi.string().hex().required().description('secret used to initialize SHA-348 HMAC')
-      }
-    },
-
-  response:
-    { schema: Joi.string() }
-}
-
-/*
-   GET /v1/publishers/hmac
- */
-
-v1.read_hmac =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entry
-    var publisher = request.query.publisher
-    var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
-
-    entry = await publishers.findOne({ publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such publisher: ' + publisher))
-
-    reply(entry.hmacSecret)
-  }
-},
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
-
-  description: 'Returns the hmacSecret for a publisher',
-  tags: [ 'api' ],
-
-  validate:
-    { query: { publisher: braveJoi.string().publisher().required() } },
-
-  response:
-    { schema: Joi.string().hex() }
-}
-
-/*
-   POST /v1/publishers/hmac
- */
-
-v1.write_hmac =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var result, state
-    var publisher = request.query.publisher
-    var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
-
-    result = crypto.randomBytes(16).toString('hex')
-    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { hmacSecret: result }
-            }
-    await publishers.update({ publisher: publisher }, state, { upsert: true })
-
-    reply(result)
-  }
-},
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
-
-  description: 'Creates the hmacSecret for a publisher',
-  tags: [ 'api' ],
-
-  validate:
-    { query: { publisher: braveJoi.string().publisher().required() } },
-
-  response:
-    { schema: Joi.string().hex() }
-}
-
-/*
    POST /v1/publishers/prune
  */
 
@@ -176,7 +72,47 @@ v1.prune =
 }
 
 /*
-   GET /v1/publishers/verify
+   GET /v1/publishers/{publisher}/verifications/{verificationId}
+ */
+
+v1.getToken =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var entry, state, token
+    var publisher = request.params.publisher
+    var verificationId = request.params.verificationId
+    var debug = braveHapi.debug(module, request)
+    var tokens = runtime.db.get('tokens', debug)
+
+    entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
+    if (entry) return reply({ token: entry.token })
+
+    token = crypto.randomBytes(32).toString('hex')
+    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+              $set: { token: token }
+            }
+    await tokens.update({ verificationId: verificationId, publisher: publisher }, state, { upsert: true })
+
+    return reply({ token: token })
+  }
+},
+
+  description: 'Gets a verification token for a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params:
+      { publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+        verificationId: Joi.string().guid().required().description('identity of the requestor')
+      }
+    },
+
+  response:
+    { schema: Joi.object().keys({ token: Joi.string().hex().length(64).required().description('verification token') }) }
+}
+
+/*
+   GET /v1/publishers/{publisher}/verify
  */
 
 var dnsTxtResolver = async function (domain) {
@@ -188,44 +124,66 @@ var dnsTxtResolver = async function (domain) {
   })
 }
 
-v1.verify =
+v1.verifyToken =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var entry, i, result, rr, rrset, value
-    var btcAddress = request.query.btcAddress
-    var hmacSecret = request.query.hmacSecret
-    var publisher = request.query.publisher
+    var data, entry, entries, i, info, matchP, rr, rrset
+    var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
+    var tokens = runtime.db.get('tokens', debug)
 
-    entry = await publishers.findOne({ publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such publisher: ' + publisher))
+    var verified = async function (entry) {
+      var state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+                    $set: { verified: true }
+                  }
 
-    if (!hmacSecret) hmacSecret = entry.hmacSecret
-    value = crypto.createHmac('sha384', new Buffer(hmacSecret, 'hex').toString('binary')).update(btcAddress).digest('hex')
+      await tokens.update(underscore.pick(entry, [ 'publisher', 'verificationId' ]), state, { upsert: true })
+
+      return reply({ status: 'success', verificationId: entry.verificationId })
+    }
+
+    entries = await tokens.find({ publisher: publisher })
+    if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))
+
+    for (i = 0; i < entries.length; i++) {
+      entry = entries[i]
+      if (entry.verified) return reply({ status: 'success', verificationId: entry.verificationId })
+    }
 
     try { rrset = await dnsTxtResolver(publisher) } catch (ex) { return reply({ status: 'failure', reason: ex.toString() }) }
+    for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
+//  console.log(JSON.stringify(rrset, null, 2))
 
-    result = { status: 'failure' }
-    for (i = 0; i < rrset.length; i++) {
-      rr = rrset[i].join('')
+    info = { publisher: publisher }
+    for (i = 0; i < entries.length; i++) {
+      entry = entries[i]
+      info.verificationId = entry.verificationId
 
-      if (rr.indexOf(prefix) !== 0) {
-        if (!result.reason) result.reason = 'no TXT RRs starting with ' + prefix
-        continue
+      for (i = 0; i < rrset.length; i++) {
+        rr = rrset[i]
+        if (rr.indexOf(prefix) !== 0) continue
+
+        matchP = true
+        if (rr.substring(prefix.length) !== entry.token) {
+          debug('verify', underscore.extend(info, { reason: 'TXT RR suffix mismatch ' + prefix + entry.token }))
+          continue
+        }
+
+        return await verified(entry)
       }
+      if (!matchP) debug('verify', underscore.extend(info, { reason: 'no TXT RRs starting with ' + prefix }))
 
-      if (rr.substring(prefix.length) !== value) {
-        result.reason = 'TXT RR suffix mismatch'
-        continue
+      try {
+        data = await braveHapi.wreck.get('http://' + publisher + '/.well-known/brave-payments-verification.txt')
+        if (data.toString().indexOf(entry.token) !== -1) return await verified(entry)
+
+        debug('verify', underscore.extend(info, { reason: 'data mismatch' }))
+      } catch (ex) {
+        debug('verify', underscore.extend(info, { reason: ex.toString() }))
       }
-
-      result.status = 'success'
-      break
     }
-    if ((result.status === 'failure') && (!result.reason)) result.reason = 'no TXT RRs'
 
-    return reply(result)
+    return reply({ status: 'failure' })
   }
 },
 
@@ -235,31 +193,24 @@ v1.verify =
       mode: 'required'
     },
 
-  description: 'Verifies the TXT record for a publisher',
+  description: 'Verifies a publisher',
   tags: [ 'api' ],
 
   validate:
-    { query:
-      { publisher: braveJoi.string().publisher().required(),
-        btcAddress: braveJoi.string().base58().required().description('BTC address'),
-        hmacSecret: Joi.string().hex().optional().description('secret used to initialize SHA-348 HMAC')
-      }
-    },
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') } },
 
   response:
     { schema: Joi.object().keys(
       { status: Joi.string().valid('success', 'failure').required().description('victory is mine!'),
-        reason: Joi.string().optional().description('reason for failure')
+        verificationId: Joi.string().guid().optional().description('identity of the verified requestor')
       })
     }
 }
 
 module.exports.routes = [
-  braveHapi.routes.async().path('/v1/publishers/hmac').config(v1.read_hmac),
-  braveHapi.routes.async().post().path('/v1/publishers/hmac').config(v1.write_hmac),
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
-  braveHapi.routes.async().path('/v1/publishers/txt').config(v1.txt),
-  braveHapi.routes.async().path('/v1/publishers/verify').config(v1.verify)
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').config(v1.getToken),
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken)
 ]
 
 module.exports.initialize = async function (debug, runtime) {
@@ -267,9 +218,16 @@ module.exports.initialize = async function (debug, runtime) {
   [ { category: runtime.db.get('publishers', debug),
       name: 'publishers',
       property: 'publisher',
-      empty: { publisher: '', address: '', hmacSecret: '', timestamp: bson.Timestamp.ZERO },
+      empty: { publisher: '', verified: false, address: '', token: '', timestamp: bson.Timestamp.ZERO },
       unique: [ { publisher: 0 } ],
-      others: [ { address: 0 }, { hmacSecret: 1 }, { paymentStamp: 1 }, { timestamp: 1 } ]
+      others: [ { verified: 1 }, { address: 0 }, { token: 0 }, { timestamp: 1 } ]
+    },
+    { category: runtime.db.get('tokens', debug),
+      name: 'tokens',
+      property: 'verificationId_0_publisher',
+      empty: { verificationId: '', publisher: '', token: '', verified: false, timestamp: bson.Timestamp.ZERO },
+      unique: [ { verificationId: 0, publisher: 1 } ],
+      others: [ { token: 0 }, { verified: 1 }, { timestamp: 1 } ]
     }
   ])
 }
