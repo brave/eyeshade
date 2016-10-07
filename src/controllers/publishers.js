@@ -336,9 +336,9 @@ module.exports.notify =
 
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
-  braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').config(v1.getBalance),
-  braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').config(v1.getToken),
-  braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').config(v1.setWallet),
+  braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').extras().config(v1.getBalance),
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').extras().config(v1.getToken),
+  braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').extras().config(v1.setWallet),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken)
 ]
 
