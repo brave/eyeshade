@@ -106,6 +106,11 @@ v1.getBalance =
   }
 },
 
+  auth:
+    { strategy: 'simple',
+      mode: 'required'
+    },
+
   description: 'Gets a verification token for a publisher',
   tags: [ 'api' ],
 
@@ -136,8 +141,6 @@ v1.getToken =
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
-console.log(require('json-stringify-safe')(request.auth.credentials, null, 2))
-console.log(require('json-stringify-safe')(request.raw.req, null, 2))
     entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
     if (entry) return reply({ token: entry.token })
 
@@ -150,6 +153,11 @@ console.log(require('json-stringify-safe')(request.raw.req, null, 2))
     reply({ token: token })
   }
 },
+
+  auth:
+    { strategy: 'simple',
+      mode: 'required'
+    },
 
   description: 'Gets a verification token for a publisher',
   tags: [ 'api' ],
@@ -193,6 +201,11 @@ v1.setWallet =
     reply({})
   }
 },
+
+  auth:
+    { strategy: 'simple',
+      mode: 'required'
+    },
 
   description: 'Sets the bitcoin address for a publisher',
   tags: [ 'api' ],
@@ -298,12 +311,6 @@ v1.verifyToken =
     return reply({ status: 'failure' })
   }
 },
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
 
   description: 'Verifies a publisher',
   tags: [ 'api' ],

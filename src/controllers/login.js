@@ -98,8 +98,10 @@ var extras = {
   ext: {
     onPreAuth: {
       method: function (request, reply) {
-        var ipaddr = request.info.remoteAddress
+        var ipaddr = (request.headers['x_forwarded_for'] && request.headers['x_forwarded_for'].split(',')[0]) ||
+                       request.info.remoteAddress
 
+        console.log('ipaddr=' + ipaddr)
         if ((!authorizedAddrs) ||
               (authorizedAddrs.indexOf(ipaddr) !== -1) ||
               (underscore.find(authorizedBlocks, (block) => { block.contains(ipaddr) }))) return reply.continue()
