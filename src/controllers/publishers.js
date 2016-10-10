@@ -116,7 +116,8 @@ v1.getBalance =
 
   validate:
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency') }
+      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency'),
+               access_token: Joi.string().guid().optional() }
     },
 
   response:
@@ -166,7 +167,8 @@ v1.getToken =
     { params:
       { publisher: braveJoi.string().publisher().required().description('the publisher identity'),
         verificationId: Joi.string().guid().required().description('identity of the requestor')
-      }
+      },
+      query: { access_token: Joi.string().guid().optional() }
     },
 
   response:
@@ -213,7 +215,8 @@ v1.setWallet =
   validate:
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
       query: { bitcoinAddress: braveJoi.string().base58().required().description('BTC address'),
-               verificationId: Joi.string().guid().required().description('identity of the requestor') }
+               verificationId: Joi.string().guid().required().description('identity of the requestor'),
+               access_token: Joi.string().guid().optional() }
     },
 
   response:
