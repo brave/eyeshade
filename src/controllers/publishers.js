@@ -261,7 +261,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
 v1.verifyToken =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, entry, entries, i, info, matchP, rr, rrset
+    var data, entry, entries, i, info, j, matchP, rr, rrset
     var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
@@ -287,8 +287,8 @@ v1.verifyToken =
       entry = entries[i]
       info.verificationId = entry.verificationId
 
-      for (i = 0; i < rrset.length; i++) {
-        rr = rrset[i]
+      for (j = 0; j < rrset.length; j++) {
+        rr = rrset[j]
         if (rr.indexOf(prefix) !== 0) continue
 
         matchP = true
