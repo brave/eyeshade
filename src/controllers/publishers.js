@@ -191,9 +191,9 @@ v1.setWallet =
     var tokens = runtime.db.get('tokens', debug)
 
     entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such publisher: ' + publisher))
+    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
-    if (!entry.verified) return reply(boom.badData('not verified: ' + publisher))
+    if (!entry.verified) return reply(boom.badData('not verified: ' + publisher + ' using ' + verificationId))
 
     state = { $currentDate: { timestamp: { $type: 'timestamp' } },
               $set: { verified: true, address: bitcoinAddress }
@@ -238,14 +238,17 @@ var dnsTxtResolver = async function (domain) {
 
 var verified = async function (request, reply, runtime, entry, verified, reason) {
   var payload, state
+  var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
   var tokens = runtime.db.get('tokens', debug)
 
+  debug('verified', underscore.extend(underscore.clone(indices), { verified: verified, reason: reason }))
+
   entry.verified = verified
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: { verified: entry.verified }
+            $set: { verified: entry.verified, reason: reason }
           }
-  await tokens.update(underscore.pick(entry, [ 'publisher', 'verificationId' ]), state, { upsert: true })
+  await tokens.update(indices, state, { upsert: true })
 
   reason = reason || (verified ? 'ok' : 'unknown')
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
@@ -253,7 +256,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
     await braveHapi.wreck.patch(publisherBase + '/v1/publishers/' + encodeURIComponent(entry.publisher) + '/verifications',
                                 { payload: payload })
   } catch (ex) {
-    debug('verified', underscore.extend(underscore.pick(entry, [ 'verificationId', 'publisher' ]), { reason: ex.toString() }))
+    debug('patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
   if (verified) reply({ status: 'success', verificationId: entry.verificationId })
 }
@@ -297,13 +300,15 @@ v1.verifyToken =
           continue
         }
 
-        return await verified(request, reply, runtime, entry, true)
+        return await verified(request, reply, runtime, entry, true, 'TXT RR matches')
       }
       if (!matchP) await loser('no TXT RRs starting with ' + prefix)
 
       try {
         data = await braveHapi.wreck.get('http://' + publisher + '/.well-known/brave-payments-verification.txt')
-        if (data.toString().indexOf(entry.token) !== -1) return await verified(request, reply, runtime, entry, true)
+        if (data.toString().indexOf(entry.token) !== -1) {
+          return await verified(request, reply, runtime, entry, true, 'web file matches')
+        }
 
         await loser('data mismatch')
       } catch (ex) {
@@ -357,9 +362,9 @@ module.exports.initialize = async function (debug, runtime) {
     { category: runtime.db.get('tokens', debug),
       name: 'tokens',
       property: 'verificationId_0_publisher',
-      empty: { verificationId: '', publisher: '', token: '', verified: false, timestamp: bson.Timestamp.ZERO },
+      empty: { verificationId: '', publisher: '', token: '', verified: false, reason: '', timestamp: bson.Timestamp.ZERO },
       unique: [ { verificationId: 0, publisher: 1 } ],
-      others: [ { token: 0 }, { verified: 1 }, { timestamp: 1 } ]
+      others: [ { token: 0 }, { verified: 1 }, { reason: 1 }, { timestamp: 1 } ]
     }
   ])
 }
