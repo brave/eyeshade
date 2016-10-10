@@ -184,8 +184,8 @@ v1.setWallet =
   return async function (request, reply) {
     var entry, state
     var publisher = request.params.publisher
-    var bitcoinAddress = request.params.bitcoinAddress
-    var verificationId = request.query.verificationId
+    var bitcoinAddress = request.payload.bitcoinAddress
+    var verificationId = request.payload.verificationId
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
     var tokens = runtime.db.get('tokens', debug)
@@ -214,9 +214,10 @@ v1.setWallet =
 
   validate:
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { bitcoinAddress: braveJoi.string().base58().required().description('BTC address'),
-               verificationId: Joi.string().guid().required().description('identity of the requestor'),
-               access_token: Joi.string().guid().optional() }
+      query: { access_token: Joi.string().guid().optional() },
+      payload: { bitcoinAddress: braveJoi.string().base58().required().description('BTC address'),
+                 verificationId: Joi.string().guid().required().description('identity of the requestor')
+               }
     },
 
   response:
