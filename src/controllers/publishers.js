@@ -255,7 +255,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   } catch (ex) {
     debug('verified', underscore.extend(underscore.pick(entry, [ 'verificationId', 'publisher' ]), { reason: ex.toString() }))
   }
-  return reply({ status: 'success', verificationId: entry.verificationId })
+  if (verified) reply({ status: 'success', verificationId: entry.verificationId })
 }
 
 v1.verifyToken =
