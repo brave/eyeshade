@@ -4,7 +4,7 @@
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
-    "lint": "gulp lint",
+    "lint": "standard",
     "server": "./node_modules/.bin/babel-node src/index.js",
     "start": "DEBUG=*,-babel,-mongo:*,mongo:queries ./node_modules/.bin/babel-node src/index.js",
     "test": "npm run test-security",
@@ -73,9 +73,11 @@
     "gulp-standard": "^5.2.2",
     "nsp": "^2.2.0",
     "rsmq-cli": "^0.1.1",
-    "run-sequence": "^1.1.0"
+    "run-sequence": "^1.1.0",
+    "standard": "8.1.0"
   },
   "standard": {
+    "ignore": [ "config/config.*" ],
     "parser": "babel-eslint"
   }
 }
