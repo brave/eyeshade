@@ -23,6 +23,7 @@ v1.prune =
     var debug = braveHapi.debug(module, request)
     var voting = runtime.db.get('voting', debug)
 
+    reply().code(204).type('application/json')
     votes = await voting.aggregate([
         { $match: { counts: { $gt: 0 },
                     exclude: false
