@@ -101,7 +101,8 @@ v1.getBalance =
     satoshis = summary.length > 0 ? summary[0].satoshis : 0
 
     rate = runtime.wallet.rates[currency.toUpperCase()]
-    if (rate) amount = Math.round((satoshis * rate) / 1e8)
+    // TBD: assumes 2 decimals
+    if (rate) amount = ((satoshis * rate) / 1e8).toFixed(2)
     reply({ amount: amount, currency: currency, satoshis: satoshis })
   }
 },
