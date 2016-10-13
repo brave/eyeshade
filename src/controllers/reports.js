@@ -22,21 +22,22 @@ v1.publishers =
     var voting = runtime.db.get('voting', debug)
 
     var slicer = async function (quantum) {
-      var counts, fees, i, satoshis, slice, state
+      var fees, i, satoshis, slice, state
       var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
 
-      counts = 0
       for (i = 0; i < slices.length; i++) {
         slice = slices[i]
 
-        counts += slice.counts
         satoshis = Math.floor(quantum.quantum * slice.counts * 0.95)
         fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
         if (!publishers[slice.publisher]) publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
         publishers[slice.publisher].satoshis += satoshis
         publishers[slice.publisher].fees += fees
-        publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId, counts: slice.counts, satoshis: satoshis,
-                                                 fees: fees })
+        publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
+                                                 counts: slice.counts,
+                                                 satoshis: satoshis,
+                                                 fees: fees
+                                               })
         if (slice.satoshis === satoshis) continue
 
         state = { $set: { satoshis: satoshis } }
@@ -65,13 +66,20 @@ v1.publishers =
     results.forEach((result) => {
       satoshis += result.satoshis
       fees += result.fees
-      data.push({ publisher: result.publisher, total: result.satoshis, fees: result.fees,
-                  'publisher USD': (result.satoshis * usd).toFixed(2), 'processor USD': (result.fees * usd).toFixed(2) })
+      data.push({ publisher: result.publisher,
+                  total: result.satoshis,
+                  fees: result.fees,
+                  'publisher USD': (result.satoshis * usd).toFixed(2),
+                  'processor USD': (result.fees * usd).toFixed(2)
+                })
       if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
     })
-    data.push({ publisher: 'TOTAL', total: satoshis, fees: fees,
-                'publisher USD': (satoshis * usd).toFixed(2), 'processor USD': (fees * usd).toFixed(2) })
-
+    data.push({ publisher: 'TOTAL',
+                total: satoshis,
+                fees: fees,
+                'publisher USD': (satoshis * usd).toFixed(2),
+                'processor USD': (fees * usd).toFixed(2)
+              })
     filename = 'publishers-' + dateformat(underscore.now(), datefmt) + '.csv'
     reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename="' + filename + '"')
   }

@@ -312,7 +312,12 @@ v1.verifyToken =
           return await verified(request, reply, runtime, entry, true, 'web file matches')
         }
 
-console.log(data.toString())
+        try {
+          data = await braveHapi.wreck.get('https://' + publisher + '/.well-known/brave-payments-verification.txt')
+          if (data.toString().indexOf(entry.token) !== -1) {
+            return await verified(request, reply, runtime, entry, true, 'web file matches')
+          }
+        } catch (ex) {}
         await loser('data mismatch')
       } catch (ex) {
         await loser(ex.toString())
