@@ -312,6 +312,7 @@ v1.verifyToken =
           return await verified(request, reply, runtime, entry, true, 'web file matches')
         }
 
+console.log(data.toString())
         await loser('data mismatch')
       } catch (ex) {
         await loser(ex.toString())
