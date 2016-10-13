@@ -279,7 +279,10 @@ v1.verifyToken =
       if (entry.verified) return reply({ status: 'success', verificationId: entry.verificationId })
     }
 
-    try { rrset = await dnsTxtResolver(publisher) } catch (ex) { return reply({ status: 'failure', reason: ex.toString() }) }
+    try { rrset = await dnsTxtResolver(publisher) } catch (ex) {
+      debug('dnsTxtResolver', underscore.extend({ publisher: publisher, reason: ex.toString() }))
+      rrset = []
+    }
     for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
 
     var loser = async function (reason) {
