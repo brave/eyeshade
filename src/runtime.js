@@ -1,4 +1,3 @@
-var debug = new (require('sdebug'))('server')
 var underscore = require('underscore')
 var wreck = require('wreck')
 
@@ -30,7 +29,7 @@ var runtime = {
 }
 runtime.wallet = new Wallet(config, runtime)
 
-runtime.notify = (payload) => {
+runtime.notify = (debug, payload) => {
   var opts
   var params = runtime.config.slack
 
@@ -41,11 +40,12 @@ runtime.notify = (payload) => {
                                          username: params.username || 'webhookbot',
                                          icon_emoji: params.icon_emoji || ':ghost:',
                                          text: 'ping.' }, payload) }
+  debug('notify', opts.payload)
 
   wreck.post(params.webhook, opts, (err, response, body) => {
     if (err) return debug('notify', { payload: opts.payload, reason: err.toString() })
 
-     debug('notify', opts.payload)
+    debug('notify', opts.payload)
   })
 }
 

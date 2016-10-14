@@ -49,7 +49,7 @@ var pruner = async function (debug, runtime) {
     await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
   })
 
-  runtime.notify({ text: 'pruned ' + JSON.stringify(results, null, 2) })
+  runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
 }
 
 v1.prune =
