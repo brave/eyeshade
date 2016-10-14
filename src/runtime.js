@@ -1,3 +1,4 @@
+var querystring = require('querystring')
 var underscore = require('underscore')
 var wreck = require('wreck')
 
@@ -30,6 +31,7 @@ var runtime = {
 runtime.wallet = new Wallet(config, runtime)
 
 runtime.notify = (debug, payload) => {
+  var opts
   var params = runtime.config.slack
 
   debug('notify', payload)
@@ -39,15 +41,14 @@ runtime.notify = (debug, payload) => {
                                  username: params.username || 'webhookbot',
                                  icon_emoji: params.icon_emoji || ':ghost:',
                                  text: 'ping.' })
-  debug('notify', payload)
-
-try {
-  wreck.post(params.webhook, { payload: JSON.stringify({ payload: payload }) }, (err, response, body) => {
+  opts = { headers: { 'content-type': 'application/x-www-form-url-encoded' },
+           payload: querystring.stringify(payload)
+         }
+  wreck.post(params.webhook, opts, (err, response, body) => {
     if (err) return debug('notify', { payload: payload, reason: err.toString() })
 
     debug('notify', payload)
   })
-} catch (ex) { debug('notify', ex) }
 }
 
 module.exports = runtime
