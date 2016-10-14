@@ -9,6 +9,10 @@ module.exports =
     { environment   : process.env.BITGO_ENVIRONMENT
     }
   }
+, slack             :
+  { webhook         : process.env.SLACK_WEBHOOK
+  , channel         : process.env.SLACK_CHANNEL
+  }
 , login             :
   { organization    : ''
   , world           : '/documentation'

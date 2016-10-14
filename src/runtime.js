@@ -1,4 +1,6 @@
+var debug = new (require('sdebug'))('server')
 var underscore = require('underscore')
+var wreck = require('wreck')
 
 var DB = require('./database')
 var Queue = require('./queue')
@@ -27,5 +29,21 @@ var runtime = {
   queue: new Queue(config)
 }
 runtime.wallet = new Wallet(config, runtime)
+
+runtime.notify = (payload) => {
+  var opts
+  var params = runtime.config.slack
+
+  if (!(params && params.webhook && params.channel)) return
+
+  opts = { payload: underscore.extends({ channel: params.channel,
+                                         username: params.username || 'webhookbot',
+                                         icon_emoji: params.icon_emoji || ':ghost:',
+                                         text: 'ping.' }, payload) }
+
+  wreck.post(params.webhook, opts, (err, response, body) => {
+    debug('notify', { payload: opts.payload, reason: err.toString() })
+  })
+}
 
 module.exports = runtime
