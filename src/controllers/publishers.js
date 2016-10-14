@@ -266,7 +266,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
 v1.verifyToken =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, entry, entries, i, info, j, matchP, rr, rrset
+    var data, entry, entries, i, info, j, matchP, reason, rr, rrset
     var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
@@ -280,7 +280,10 @@ v1.verifyToken =
     }
 
     try { rrset = await dnsTxtResolver(publisher) } catch (ex) {
-      debug('dnsTxtResolver', underscore.extend({ publisher: publisher, reason: ex.toString() }))
+      reason = ex.toString()
+      if (reason.indexOf('ENODATA') === -1) {
+        debug('dnsTxtResolver', underscore.extend({ publisher: publisher, reason: reason }))
+      }
       rrset = []
     }
     for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
