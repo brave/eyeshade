@@ -36,11 +36,10 @@ runtime.notify = (debug, payload) => {
   debug('notify', payload)
   if (!(params && params.webhook && params.channel)) return debug('notify', 'slack webhook not configured')
 
-  opts = { payload: underscore.extends({ channel: params.channel,
-                                         username: params.username || 'webhookbot',
-                                         icon_emoji: params.icon_emoji || ':ghost:',
-                                         text: 'ping.' }, payload) }
-  debug('notify', opts.payload)
+  opts = { payload: underscore.extend({ channel: params.channel,
+                                        username: params.username || 'webhookbot',
+                                        icon_emoji: params.icon_emoji || ':ghost:',
+                                        text: 'ping.' }, payload) }
 
   wreck.post(params.webhook, opts, (err, response, body) => {
     if (err) return debug('notify', { payload: opts.payload, reason: err.toString() })
