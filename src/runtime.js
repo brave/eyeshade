@@ -1,6 +1,5 @@
-var querystring = require('querystring')
+var Slack = require('node-slack')
 var underscore = require('underscore')
-var wreck = require('wreck')
 
 var DB = require('./database')
 var Queue = require('./queue')
@@ -28,31 +27,20 @@ var runtime = {
   login: config.login,
   queue: new Queue(config)
 }
+if (runtime.config.slack && runtime.config.slack.webhook) runtime.slack = new Slack(runtime.config.slack.webhook)
 runtime.wallet = new Wallet(config, runtime)
 
 runtime.notify = (debug, payload) => {
-  var opts
   var params = runtime.config.slack
 
-try {
-  debug('notify', payload)
-  if (!(params && params.webhook && params.channel)) return debug('notify', 'slack webhook not configured')
-
+  if (!runtime.slack) return debug('notify', 'slack webhook not configured')
   underscore.defaults(payload, { channel: params.channel,
                                  username: params.username || 'webhookbot',
                                  icon_emoji: params.icon_emoji || ':ghost:',
                                  text: 'ping.' })
-  opts = { headers: { 'content-type': 'application/x-www-form-url-encoded' },
-           payload: querystring.stringify(payload)
-         }
-  debug('notify', params)
-  debug('notify', opts)
-  wreck.post(params.webhook, opts, (err, response, body) => {
-    if (err) return debug('notify', { payload: payload, reason: err.toString() })
-
-    debug('notify', payload)
+  runtime.slack(payload, (res, err, body) => {
+    if (err) debug('notify', err)
   })
-} catch (ex) { console.log('notify', ex) }
 }
 
 module.exports = runtime
