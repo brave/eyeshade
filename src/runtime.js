@@ -45,6 +45,8 @@ try {
   opts = { headers: { 'content-type': 'application/x-www-form-url-encoded' },
            payload: querystring.stringify(payload)
          }
+  debug('notify', params)
+  debug('notify', opts)
   wreck.post(params.webhook, opts, (err, response, body) => {
     if (err) return debug('notify', { payload: payload, reason: err.toString() })
 
