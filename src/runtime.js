@@ -40,7 +40,7 @@ try {
                                  icon_emoji: params.icon_emoji || ':ghost:',
                                  text: 'ping.' })
   debug('notify1', payload)
-  runtime.slack(payload, (res, err, body) => {
+  runtime.slack.send(payload, (res, err, body) => {
     if (err) debug('notify2', err)
   })
 } catch (ex) { debug('notify3', ex) }
