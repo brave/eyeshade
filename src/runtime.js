@@ -34,6 +34,7 @@ runtime.notify = (debug, payload) => {
   var opts
   var params = runtime.config.slack
 
+try {
   debug('notify', payload)
   if (!(params && params.webhook && params.channel)) return debug('notify', 'slack webhook not configured')
 
@@ -49,6 +50,7 @@ runtime.notify = (debug, payload) => {
 
     debug('notify', payload)
   })
+} catch (ex) { console.log('notify', ex) }
 }
 
 module.exports = runtime
