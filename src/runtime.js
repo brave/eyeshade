@@ -34,7 +34,8 @@ runtime.notify = (payload) => {
   var opts
   var params = runtime.config.slack
 
-  if (!(params && params.webhook && params.channel)) return
+  debug('notify', payload)
+  if (!(params && params.webhook && params.channel)) return debug('notify', 'slack webhook not configured')
 
   opts = { payload: underscore.extends({ channel: params.channel,
                                          username: params.username || 'webhookbot',
