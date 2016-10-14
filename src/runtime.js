@@ -43,7 +43,9 @@ runtime.notify = (payload) => {
                                          text: 'ping.' }, payload) }
 
   wreck.post(params.webhook, opts, (err, response, body) => {
-    debug('notify', { payload: opts.payload, reason: err.toString() })
+    if (err) return debug('notify', { payload: opts.payload, reason: err.toString() })
+
+     debug('notify', opts.payload)
   })
 }
 
