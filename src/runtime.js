@@ -33,17 +33,15 @@ runtime.wallet = new Wallet(config, runtime)
 runtime.notify = (debug, payload) => {
   var params = runtime.config.slack
 
-try {
-  if (!runtime.slack) return debug('notify0', 'slack webhook not configured')
+  if (!runtime.slack) return debug('notify', 'slack webhook not configured')
   underscore.defaults(payload, { channel: params.channel,
                                  username: params.username || 'webhookbot',
                                  icon_emoji: params.icon_emoji || ':ghost:',
+                                 icon_url: params.icon_url || ':ghost:',
                                  text: 'ping.' })
-  debug('notify1', payload)
   runtime.slack.send(payload, (res, err, body) => {
-    if (err) debug('notify2', err)
+    if (err) debug('notify', err)
   })
-} catch (ex) { debug('notify3', ex) }
 }
 
 module.exports = runtime
