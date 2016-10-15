@@ -5,6 +5,7 @@ var runSequence = require('run-sequence')
 var standard = require('gulp-standard')
 
 var SRC = [
+  'gulpfile.js',
   'rsmq-clear.js',
   'src/**/[A-Za-z]*.js',
   'src/controllers/**/[A-Za-z]*.js',
@@ -24,7 +25,6 @@ gulp.task('run', function () {
   nodemon({
     script: 'src/index.js',
     ext: 'js',
-    env: { 'DEBUG': '*' },
     execMap: {
       js: './node_modules/.bin/babel-node'
     },
