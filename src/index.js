@@ -222,7 +222,7 @@ var main = async function () {
       env: underscore.pick(process.env,
                            [ 'BITGO_CUSTOM_ROOT_URI', 'BITGO_ENVIRONMENT', 'DEBUG', 'DYNO', 'NEW_RELIC_APP_NAME', 'NODE_ENV' ])
     })
-    runtime.notify(debug, { text: process.env.NEW_RELIC_APP_NAME + '@' + npminfo.version + ' started ' + process.env.DYNO })
+    runtime.notify(debug, { text: npminfo.name + '@' + npminfo.version + ' started ' + process.env.DYNO })
 
     runtime.npminfo = underscore.pick(npminfo, 'name', 'version', 'description', 'author', 'license', 'bugs', 'homepage')
     runtime.npminfo.children = {}

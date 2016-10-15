@@ -6,7 +6,6 @@ var standard = require('gulp-standard')
 
 var SRC = [
   'gulpfile.js',
-  'rsmq-clear.js',
   'src/**/[A-Za-z]*.js',
   'src/controllers/**/[A-Za-z]*.js',
   'test/**/[A-Za-z]*.js'
