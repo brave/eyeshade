@@ -1,5 +1,5 @@
 module.exports =
-{ port                  : process.env.PORT || 3002
+{ port                  : process.env.PORT                 || 3002
 , database              :
   { mongo               : process.env.MONGODB_URI          || 'localhost/test' }
 , queue                 :
