@@ -203,7 +203,7 @@ v1.setWallet =
     if (!entry.verified) return reply(boom.badData('not verified: ' + publisher + ' using ' + verificationId))
 
     state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { verified: true, address: bitcoinAddress }
+              $set: { address: bitcoinAddress }
             }
     await publishers.update({ publisher: publisher }, state, { upsert: true })
 
