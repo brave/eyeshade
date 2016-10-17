@@ -262,7 +262,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
   try {
     await braveHapi.wreck.patch(publisherBase + '/v1/publishers/' + encodeURIComponent(entry.publisher) + '/verifications',
-                                { payload: payload })
+                                { payload: JSON.stringify(payload) })
   } catch (ex) {
     debug('patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
@@ -359,7 +359,7 @@ module.exports.notify =
 // TBD: add some logging here for testing...
 
     await braveHapi.wreck.post(publisherBase + '/v1/publishers/' + encodeURIComponent(publisher) + '/notifications',
-                               { payload: payload })
+                               { payload: JSON.stringify (payload) })
   }
 
 module.exports.routes = [
