@@ -376,7 +376,7 @@ module.exports.initialize = async function (debug, runtime) {
       name: 'publishers',
       property: 'publisher',
       empty: { publisher: '', verified: false, address: '', token: '', timestamp: bson.Timestamp.ZERO },
-      unique: [ { publisher: 0 } ],
+      unique: [ { publisher: 1 } ],
       others: [ { verified: 1 }, { address: 0 }, { token: 0 }, { timestamp: 1 } ]
     },
     { category: runtime.db.get('tokens', debug),
