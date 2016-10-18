@@ -292,7 +292,7 @@ v1.verifyToken =
     for (i = 0; i < entries.length; i++) {
       entry = entries[i]
       if (entry.verified) {
-        await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
+        await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: entry.verified })
         return reply({ status: 'success', verificationId: entry.verificationId })
       }
     }
