@@ -5,7 +5,7 @@ var bson = require('bson')
 var crypto = require('crypto')
 var dns = require('dns')
 var Joi = require('joi')
-var ledgerPublisher = require('ledger-publisher')
+// var ledgerPublisher = require('ledger-publisher')
 var underscore = require('underscore')
 
 var v1 = {}
@@ -16,10 +16,26 @@ var prefix = 'brave-ledger-verification='
  */
 
 var pruner = async function (debug, runtime) {
-  var results, state, votes
+//  var results, state, votes
   var tokens = runtime.db.get('tokens', debug)
-  var voting = runtime.db.get('voting', debug)
+//  var voting = runtime.db.get('voting', debug)
+  var entries
 
+  entries = await tokens.find({ verified: true })
+  debug('begin', { count: entries.length })
+  entries.forEach(async function (entry) {
+    debug('entry', entry)
+    try {
+      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
+                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                    payload: JSON.stringify({ publisher: entry.publisher, verified: true })
+                                  })
+    } catch (ex) {
+      debug('prune', underscore.extend(entry, { reason: ex.toString() }))
+    }
+  })
+  debug('done.', {})
+/*
   votes = await voting.aggregate([
       { $match: { counts: { $gt: 0 },
                   exclude: false
@@ -50,19 +66,7 @@ var pruner = async function (debug, runtime) {
   })
 
   runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
-
-  debug('begin', {})
-  (await tokens.find({ verified: true })).forEach(async function (entry) {
-    try {
-      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
-                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                    payload: JSON.stringify({ publisher: entry.publisher, verified: true })
-                                  })
-    } catch (ex) {
-      debug('prune', underscore.extend(entry, { reason: ex.toString() }))
-    }
-  })
-  debug('done.', {})
+ */
 }
 
 v1.prune =
