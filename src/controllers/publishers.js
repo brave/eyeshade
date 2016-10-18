@@ -3,6 +3,7 @@ var braveHapi = require('../brave-hapi')
 var braveJoi = require('../brave-joi')
 var bson = require('bson')
 var crypto = require('crypto')
+var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
 var ledgerPublisher = require('ledger-publisher')
@@ -84,7 +85,7 @@ v1.prune =
 v1.getBalance =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var amount, rate, satoshis, summary
+    var amount, entry, rate, satoshis, summary
     var publisher = request.params.publisher
     var currency = request.query.currency
     var debug = braveHapi.debug(module, request)
@@ -106,8 +107,10 @@ v1.getBalance =
     satoshis = summary.length > 0 ? summary[0].satoshis : 0
 
     rate = runtime.wallet.rates[currency.toUpperCase()]
-    // TBD: assumes 2 decimals
-    if (rate) amount = ((satoshis * rate) / 1e8).toFixed(2)
+    if (rate) {
+      entry = currencyCodes.code(currency)
+      amount = ((satoshis * rate) / 1e8).toFixed(entry ? entry.digits : 2)
+    }
     reply({ amount: amount, currency: currency, satoshis: satoshis })
   }
 },
