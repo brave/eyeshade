@@ -5,7 +5,7 @@ var bson = require('bson')
 var crypto = require('crypto')
 var dns = require('dns')
 var Joi = require('joi')
-// var ledgerPublisher = require('ledger-publisher')
+var ledgerPublisher = require('ledger-publisher')
 var underscore = require('underscore')
 
 var v1 = {}
@@ -16,26 +16,9 @@ var prefix = 'brave-ledger-verification='
  */
 
 var pruner = async function (debug, runtime) {
-//  var results, state, votes
-  var tokens = runtime.db.get('tokens', debug)
-//  var voting = runtime.db.get('voting', debug)
-  var entries
+  var results, state, votes
+  var voting = runtime.db.get('voting', debug)
 
-  entries = await tokens.find({ verified: true })
-  debug('begin', { count: entries.length })
-  entries.forEach(async function (entry) {
-    debug('entry', entry)
-    try {
-      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
-                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                    payload: JSON.stringify({ publisher: entry.publisher, verified: true })
-                                  })
-    } catch (ex) {
-      debug('prune', underscore.extend(entry, { reason: ex.toString() }))
-    }
-  })
-  debug('done.', {})
-/*
   votes = await voting.aggregate([
       { $match: { counts: { $gt: 0 },
                   exclude: false
@@ -66,7 +49,6 @@ var pruner = async function (debug, runtime) {
   })
 
   runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
- */
 }
 
 v1.prune =
@@ -289,7 +271,8 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   try {
     await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
                                 { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                  payload: JSON.stringify({ publisher: entry.publisher, verified: true })
+                                  payload: JSON.stringify({ publisher: entry.publisher, verified: verified }),
+                                  useProxyP: true
                                 })
   } catch (ex) {
     debug('ledger patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
@@ -305,6 +288,16 @@ v1.verifyToken =
     var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
+
+    try {
+      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
+                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                    payload: JSON.stringify({ publisher: publisher, verified: true }),
+                                    useProxyP: true
+                                  })
+    } catch (ex) {
+      debug('ledger patch', { publisher: publisher, reason: ex.toString() })
+    }
 
     entries = await tokens.find({ publisher: publisher })
     if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))

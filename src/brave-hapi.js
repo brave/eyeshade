@@ -1,3 +1,5 @@
+process.env.FIXIE_URL = 'http://fixie:NsVuEyYuZbb9qf8@velodrome.usefixie.com:80'
+
 /* utilities for Brave's HAPI servers
 
    not really extensive enough for its own package...
@@ -6,6 +8,7 @@
 
 var Netmask = require('netmask').Netmask
 var underscore = require('underscore')
+var url = require('url')
 var wreck = require('wreck')
 
 var exports = {}
@@ -116,9 +119,30 @@ var ErrorInspect = function (err) {
 
 exports.error = { inspect: ErrorInspect }
 
+var WreckProxy = function (server, opts) {
+  var headers, proxy, target
+
+  opts = underscore.omit(opts, [ 'useProxyP' ])
+  if (!process.env.FIXIE_URL) return { server: server, opts: opts }
+
+  proxy = url.parse(process.env.FIXIE_URL)
+  target = url.parse(server)
+
+  server = url.format(underscore.extend(underscore.pick(proxy, [ 'protocol', 'hostname', 'port' ]), { pathname: target.href }))
+
+  headers = underscore.clone(opts.headers || {})
+  underscore.extend(headers, { host: target.host, 'proxy-authorization': 'Basic ' + new Buffer(proxy.auth).toString('base64') })
+  opts = underscore.defaults(headers, opts)
+
+  console.log('\n' + JSON.stringify({ server: server, opts: opts }, null, 2) + '\n')
+  return { server: server, opts: opts }
+}
+
 var WreckGet = async function (server, opts) {
+  var params = (opts) && (opts.useProxyP) ? WreckProxy(server, opts) : { server: server, opts: opts }
+
   return new Promise((resolve, reject) => {
-    wreck.get(server, opts, (err, response, body) => {
+    wreck.get(params.server, params.opts, (err, response, body) => {
       if (err) return reject(err)
 
       resolve(body)
@@ -127,8 +151,10 @@ var WreckGet = async function (server, opts) {
 }
 
 var WreckPost = async function (server, opts) {
+  var params = (opts) && (opts.useProxyP) ? WreckProxy(server, opts) : { server: server, opts: opts }
+
   return new Promise((resolve, reject) => {
-    wreck.post(server, opts, (err, response, body) => {
+    wreck.post(params.server, params.opts, (err, response, body) => {
       if (err) return reject(err)
 
       resolve(body)
@@ -137,8 +163,10 @@ var WreckPost = async function (server, opts) {
 }
 
 var WreckPatch = async function (server, opts) {
+  var params = (opts) && (opts.useProxyP) ? WreckProxy(server, opts) : { server: server, opts: opts }
+
   return new Promise((resolve, reject) => {
-    wreck.patch(server, opts, (err, response, body) => {
+    wreck.patch(params.server, params.opts, (err, response, body) => {
       if (err) return reject(err)
 
       resolve(body)
