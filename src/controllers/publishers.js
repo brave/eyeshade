@@ -10,7 +10,6 @@ var underscore = require('underscore')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
-var publisherBase = process.env.PUBLISHER_URI_BASE || 'https://publishers.brave.com'
 
 /*
    POST /v1/publishers/prune
@@ -18,6 +17,7 @@ var publisherBase = process.env.PUBLISHER_URI_BASE || 'https://publishers.brave.
 
 var pruner = async function (debug, runtime) {
   var results, state, votes
+  var tokens = runtime.db.get('tokens', debug)
   var voting = runtime.db.get('voting', debug)
 
   votes = await voting.aggregate([
@@ -50,6 +50,17 @@ var pruner = async function (debug, runtime) {
   })
 
   runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
+
+  tokens.find({ verified: true }).forEach(async function (entry) {
+    try {
+      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
+                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                    payload: JSON.stringify({ publisher: entry.publisher, verified: true })
+                                  })
+    } catch (ex) {
+      debug('prune', underscore.extend(entry, { reason: ex.toString() }))
+    }
+  })
 }
 
 v1.prune =
@@ -261,12 +272,24 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   reason = reason || (verified ? 'ok' : 'unknown')
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
   try {
-    await braveHapi.wreck.patch(publisherBase + '/v1/publishers/' + encodeURIComponent(entry.publisher) + '/verifications',
+    await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(entry.publisher) +
+                                  '/verifications',
                                 { payload: JSON.stringify(payload) })
   } catch (ex) {
-    debug('patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
+    debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
-  if (verified) reply({ status: 'success', verificationId: entry.verificationId })
+  if (!verified) return
+
+  try {
+    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
+                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                  payload: JSON.stringify({ publisher: entry.publisher, verified: true })
+                                })
+  } catch (ex) {
+    debug('ledger patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
+  }
+
+  reply({ status: 'success', verificationId: entry.verificationId })
 }
 
 v1.verifyToken =
@@ -355,11 +378,12 @@ v1.verifyToken =
 }
 
 module.exports.notify =
-  async function (publisher, payload) {
+  async function (debug, runtime, publisher, payload) {
 // TBD: add some logging here for testing...
 
-    await braveHapi.wreck.post(publisherBase + '/v1/publishers/' + encodeURIComponent(publisher) + '/notifications',
-                               { payload: JSON.stringify (payload) })
+    await braveHapi.wreck.post(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(publisher) +
+                                 '/notifications',
+                               { payload: JSON.stringify(payload) })
   }
 
 module.exports.routes = [

@@ -9,6 +9,13 @@ module.exports =
     { environment       : process.env.BITGO_ENVIRONMENT
     }
   }
+, ledger                :
+  { url                 : process.env.LEDGER_URL
+  , access_token        : process.env.LEDGER_TOKEN
+  }
+, publishers            :
+  { url                 : process.env.PUBLISHERS_URL
+  }
 , slack                 :
   { webhook             : process.env.SLACK_WEBHOOK
   , channel             : process.env.SLACK_CHANNEL
