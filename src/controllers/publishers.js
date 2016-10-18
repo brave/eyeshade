@@ -260,8 +260,6 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
           }
   await tokens.update(indices, state, { upsert: true })
 
-  await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
-
   reason = reason || (verified ? 'ok' : 'unknown')
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
   try {
@@ -274,6 +272,8 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
   if (!verified) return
+
+  await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
 
   reply({ status: 'success', verificationId: entry.verificationId })
 }
@@ -291,7 +291,10 @@ v1.verifyToken =
 
     for (i = 0; i < entries.length; i++) {
       entry = entries[i]
-      if (entry.verified) return reply({ status: 'success', verificationId: entry.verificationId })
+      if (entry.verified) {
+        await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
+        return reply({ status: 'success', verificationId: entry.verificationId })
+      }
     }
 
     try { rrset = await dnsTxtResolver(publisher) } catch (ex) {
