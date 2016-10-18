@@ -265,7 +265,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   try {
     await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(entry.publisher) +
                                   '/verifications',
-                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
                                   payload: JSON.stringify(payload)
                                 })
   } catch (ex) {
