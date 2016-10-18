@@ -9,12 +9,9 @@ module.exports =
     { environment       : 'test'
     }
   }
-, ledger                :
-  { url                 : process.env.LEDGER_URL
-  , access_token        : process.env.LEDGER_TOKEN
-  }
 , publishers            :
   { url                 : process.env.PUBLISHERS_URL
+  , access_token        : process.env.PUBLISHERS_TOKEN
   }
 , slack                 :
   { webhook             : process.env.SLACK_WEBHOOK

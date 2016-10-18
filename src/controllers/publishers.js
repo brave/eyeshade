@@ -265,21 +265,15 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   try {
     await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(entry.publisher) +
                                   '/verifications',
-                                { payload: JSON.stringify(payload) })
+                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                  payload: JSON.stringify(payload)
+                                })
   } catch (ex) {
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
   if (!verified) return
 
-  try {
-    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
-                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                  payload: JSON.stringify({ publisher: entry.publisher, verified: verified }),
-                                  useProxyP: true
-                                })
-  } catch (ex) {
-    debug('ledger patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
-  }
+  await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
 
   reply({ status: 'success', verificationId: entry.verificationId })
 }
@@ -350,7 +344,6 @@ v1.verifyToken =
         } catch (ex) {
           await loser(ex.toString())
         }
-        await loser('data mismatch')
       } catch (ex) {
         await loser(ex.toString())
       }
@@ -408,4 +401,6 @@ module.exports.initialize = async function (debug, runtime) {
       others: [ { token: 0 }, { verified: 1 }, { reason: 1 }, { timestamp: 1 } ]
     }
   ])
+
+  await runtime.queue.create('publisher-report')
 }
