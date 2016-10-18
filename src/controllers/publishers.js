@@ -292,12 +292,6 @@ v1.verifyToken =
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
-    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
-                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                  payload: JSON.stringify({ publisher: publisher, verified: true }),
-                                  useProxyP: true
-                                })
-
     entries = await tokens.find({ publisher: publisher })
     if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))
 
@@ -340,10 +334,12 @@ v1.verifyToken =
       if (!matchP) await loser('no TXT RRs starting with ' + prefix)
 
       try {
+/*
         data = await braveHapi.wreck.get('http://' + publisher + '/.well-known/brave-payments-verification.txt')
         if (data.toString().indexOf(entry.token) !== -1) {
           return await verified(request, reply, runtime, entry, true, 'web file matches')
         }
+ */
 
         try {
           data = await braveHapi.wreck.get('https://' + publisher + '/.well-known/brave-payments-verification.txt',
@@ -351,7 +347,9 @@ v1.verifyToken =
           if (data.toString().indexOf(entry.token) !== -1) {
             return await verified(request, reply, runtime, entry, true, 'web file matches')
           }
-        } catch (ex) {}
+        } catch (ex) {
+          await loser(ex.toString())
+        }
         await loser('data mismatch')
       } catch (ex) {
         await loser(ex.toString())
