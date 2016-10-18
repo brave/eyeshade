@@ -1,6 +1,6 @@
 {
   "name": "eyeshade",
-  "version": "0.8.88",
+  "version": "0.8.89",
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
@@ -51,6 +51,7 @@
     "newrelic": "1.23.1",
     "node-slack": "0.0.6",
     "node-uuid": "1.4.7",
+    "proxy-agent": "^2.0.0",
     "rsmq": "^0.7.0",
     "rsmq-worker": "^0.4.1",
     "sdebug": "^0.9.0",

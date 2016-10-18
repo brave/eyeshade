@@ -269,7 +269,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   if (!verified) return
 
   try {
-    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
+    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
                                 { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
                                   payload: JSON.stringify({ publisher: entry.publisher, verified: verified }),
                                   useProxyP: true
@@ -289,15 +289,11 @@ v1.verifyToken =
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
-    try {
-      await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
-                                  { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
-                                    payload: JSON.stringify({ publisher: publisher, verified: true }),
-                                    useProxyP: true
-                                  })
-    } catch (ex) {
-      debug('ledger patch', { publisher: publisher, reason: ex.toString() })
-    }
+    await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/verify',
+                                { headers: { authorization: 'bearer ' + runtime.config.ledger.access_token },
+                                  payload: JSON.stringify({ publisher: publisher, verified: true }),
+                                  useProxyP: true
+                                })
 
     entries = await tokens.find({ publisher: publisher })
     if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))
