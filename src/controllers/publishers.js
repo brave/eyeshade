@@ -51,6 +51,7 @@ var pruner = async function (debug, runtime) {
 
   runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
 
+  debug('begin', {})
   tokens.find({ verified: true }).forEach(async function (entry) {
     try {
       await braveHapi.wreck.patch(runtime.config.ledger.url + '/v1/publisher/identity',
@@ -61,6 +62,7 @@ var pruner = async function (debug, runtime) {
       debug('prune', underscore.extend(entry, { reason: ex.toString() }))
     }
   })
+  debug('done.', {})
 }
 
 v1.prune =
