@@ -240,18 +240,18 @@ v1.setWallet =
 v1.patchPublisher =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var entry, state
+    var authority, entry, state
     var publisher = request.params.publisher
-    var authorized = request.payload.authorized
-    var legalFormURL = request.payload.legalFormURL
+    var payload = request.payload
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
     entry = await publishers.findOne({ publisher: publisher })
     if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
+    authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
     state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { legalFormURL: legalFormURL, authorized: authorized }
+              $set: underscore.extend(payload, { authority: authority })
             }
     await publishers.update({ publisher: publisher }, state, { upsert: true })
 
@@ -272,7 +272,7 @@ v1.patchPublisher =
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
       payload: {
         authorized: Joi.boolean().optional().default(true).description('authorize the publisher'),
-        legalFormURL: braveJoi.string().uri().required().description('S3 URL')
+        legalFormURL: braveJoi.string().uri().optional().description('S3 URL')
       }
     },
 
@@ -440,9 +440,16 @@ module.exports.initialize = async function (debug, runtime) {
   [ { category: runtime.db.get('publishers', debug),
       name: 'publishers',
       property: 'publisher',
-      empty: { publisher: '', verified: false, address: '', legalFormURL: '', authorized: false, timestamp: bson.Timestamp.ZERO },
+      empty: { publisher: '',
+               verified: false,
+               address: '',
+               legalFormURL: '',
+               authorized: false,
+               authority: '',
+               timestamp: bson.Timestamp.ZERO
+             },
       unique: [ { publisher: 1 } ],
-      others: [ { verified: 1 }, { address: 0 }, { legalFormURL: 0 }, { authorized: 1 }, { timestamp: 1 } ]
+      others: [ { verified: 1 }, { address: 0 }, { legalFormURL: 0 }, { authorized: 1 }, { authority: 1 }, { timestamp: 1 } ]
     },
     { category: runtime.db.get('tokens', debug),
       name: 'tokens',
