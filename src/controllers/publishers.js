@@ -242,8 +242,8 @@ v1.patchPublisher =
   return async function (request, reply) {
     var entry, state
     var publisher = request.params.publisher
-    var authorized = request.params.authorized
-    var legalFormURL = request.params.legalFormURL
+    var authorized = request.payload.authorized
+    var legalFormURL = request.payload.legalFormURL
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
