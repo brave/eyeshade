@@ -234,6 +234,53 @@ v1.setWallet =
 }
 
 /*
+   PATCH /v1/publishers/{publisher}
+ */
+
+v1.patchPublisher =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var entry, state
+    var publisher = request.params.publisher
+    var authorized = request.params.authorized
+    var legalFormURL = request.params.legalFormURL
+    var debug = braveHapi.debug(module, request)
+    var publishers = runtime.db.get('publishers', debug)
+
+    entry = await publishers.findOne({ publisher: publisher })
+    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+
+    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+              $set: { legalFormURL: legalFormURL, authorized: authorized }
+            }
+    await publishers.update({ publisher: publisher }, state, { upsert: true })
+
+    reply({})
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'devops' ],
+      mode: 'required'
+    },
+
+  description: 'Sets the approved legal form and authorizes the publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      payload: {
+        authorized: Joi.boolean().optional().default(true).description('authorize the publisher'),
+        legalFormURL: braveJoi.string().uri().required().description('S3 URL')
+      }
+    },
+
+  response:
+    { schema: Joi.object().length(0) }
+}
+
+/*
    GET /v1/publishers/{publisher}/verify
  */
 
@@ -384,7 +431,8 @@ module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').whitelist().config(v1.setWallet),
-  braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken)
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken),
+  braveHapi.routes.async().patch().path('/v1/publishers/{publisher}').whitelist().config(v1.patchPublisher)
 ]
 
 module.exports.initialize = async function (debug, runtime) {
@@ -392,9 +440,9 @@ module.exports.initialize = async function (debug, runtime) {
   [ { category: runtime.db.get('publishers', debug),
       name: 'publishers',
       property: 'publisher',
-      empty: { publisher: '', verified: false, address: '', token: '', timestamp: bson.Timestamp.ZERO },
+      empty: { publisher: '', verified: false, address: '', legalFormURL: '', authorized: false, timestamp: bson.Timestamp.ZERO },
       unique: [ { publisher: 1 } ],
-      others: [ { verified: 1 }, { address: 0 }, { token: 0 }, { timestamp: 1 } ]
+      others: [ { verified: 1 }, { address: 0 }, { legalFormURL: 0 }, { authorized: 1 }, { timestamp: 1 } ]
     },
     { category: runtime.db.get('tokens', debug),
       name: 'tokens',
