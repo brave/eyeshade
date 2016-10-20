@@ -294,12 +294,14 @@ var dnsTxtResolver = async function (domain) {
 }
 
 var verified = async function (request, reply, runtime, entry, verified, reason) {
-  var payload, state
+  var message, payload, state
   var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
   var tokens = runtime.db.get('tokens', debug)
 
-  debug('verified', underscore.extend(underscore.clone(indices), { verified: verified, reason: reason }))
+  message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
+  debug('verified', message)
+  runtime.notify(debug, { text: 'verified ' + JSON.stringify(message) })
 
   entry.verified = verified
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
@@ -321,7 +323,6 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   if (!verified) return
 
   await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
-
   reply({ status: 'success', verificationId: entry.verificationId })
 }
 
