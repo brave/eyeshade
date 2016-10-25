@@ -468,8 +468,7 @@ module.exports.initialize = async function (debug, runtime) {
   await runtime.queue.create('publisher-report')
 
   resolvers = dns.getServers()
-  console.log('before: ' + JSON.stringify(resolvers))
   resolvers.splice(0, 0, '8.8.8.8', '8.8.4.4')
-  console.log('after: ' + JSON.stringify(resolvers))
+  debug('publishers', { resolvers: resolvers })
   dns.setServers(resolvers)
 }
