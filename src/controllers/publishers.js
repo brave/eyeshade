@@ -301,7 +301,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
 
   message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
   debug('verified', message)
-  runtime.notify(debug, { text: 'verified ' + JSON.stringify(message) })
+  runtime.notify(debug, { channel: '#publishers-bot', text: 'verified ' + JSON.stringify(message) })
 
   entry.verified = verified
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
@@ -424,7 +424,9 @@ module.exports.notify =
 
     await braveHapi.wreck.post(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(publisher) +
                                  '/notifications',
-                               { payload: JSON.stringify(payload) })
+                               { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
+                                 payload: JSON.stringify(payload)
+                               })
   }
 
 module.exports.routes = [
