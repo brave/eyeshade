@@ -439,6 +439,8 @@ module.exports.routes = [
 ]
 
 module.exports.initialize = async function (debug, runtime) {
+  var resolvers
+
   runtime.db.checkIndices(debug,
   [ { category: runtime.db.get('publishers', debug),
       name: 'publishers',
@@ -464,4 +466,10 @@ module.exports.initialize = async function (debug, runtime) {
   ])
 
   await runtime.queue.create('publisher-report')
+
+  resolvers = dns.getServers()
+  console.log('before: ' + JSON.stringify(resolvers))
+  resolvers.splce(0, 0, '8.8.8.8', '8.8.4.4')
+  console.log('after: ' + JSON.stringify(resolvers))
+  dns.setServers(resolvers)
 }
