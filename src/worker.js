@@ -76,7 +76,7 @@ var main = async function (id) {
         })
 
         runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
-        debug('prune-publishers', { memoryUsage: process.memoryUsage(), cpuUsage: process.cpuUsage() })
+        debug('prune-publishers', { memoryUsage: process.memoryUsage() })
       }
 
       try { await report() } catch (ex) {
