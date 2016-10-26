@@ -84,6 +84,7 @@ var main = async function (id) {
       }
       runtime.newrelic.endTransaction()
 
+      debug('prune-publishers', { message: 'restarting' })
       process.exit(0)
     })
   )
