@@ -25,7 +25,7 @@
     "babel-preset-stage-2": "^6.1.2",
     "bell": "6.0.0",
     "bitcoinjs-lib": "^2.2.0",
-    "bitgo": "^1.8.0",
+    "bitgo": "^2.0.4",
     "blipp": "2.3.0",
     "boom": "3.0.0",
     "bs58check": "^1.0.5",
