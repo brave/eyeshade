@@ -83,6 +83,8 @@ var main = async function (id) {
         runtime.newrelic.noticeError(ex, payload)
       }
       runtime.newrelic.endTransaction()
+
+      process.exit(0)
     })
   )
 }
