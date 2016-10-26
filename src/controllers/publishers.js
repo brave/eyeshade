@@ -6,7 +6,6 @@ var crypto = require('crypto')
 var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
-var ledgerPublisher = require('ledger-publisher')
 var underscore = require('underscore')
 
 var v1 = {}
@@ -16,48 +15,12 @@ var prefix = 'brave-ledger-verification='
    POST /v1/publishers/prune
  */
 
-var pruner = async function (debug, runtime) {
-  var results, state, votes
-  var voting = runtime.db.get('voting', debug)
-
-  votes = await voting.aggregate([
-      { $match: { counts: { $gt: 0 },
-                  exclude: false
-                }
-      },
-      { $group: { _id: '$publisher' } },
-      { $project: { _id: 1 } }
-  ])
-
-  state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: { exclude: true }
-          }
-
-  results = []
-  votes.forEach(async function (entry) {
-    var publisher = entry._id
-    var result
-
-    try {
-      result = ledgerPublisher.getPublisher('https://' + publisher)
-      if (result) return
-    } catch (err) {
-      return debug('prune', underscore.defaults({ publisher: publisher }, err))
-    }
-
-    results.push(publisher)
-    await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
-  })
-
-  runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
-}
-
 v1.prune =
 { handler: function (runtime) {
   return async function (request, reply) {
     var debug = braveHapi.debug(module, request)
 
-    pruner(debug, runtime)
+    await runtime.queue.send(debug, 'prune-publishers', {})
     reply({})
   }
 },
@@ -284,6 +247,15 @@ v1.patchPublisher =
    GET /v1/publishers/{publisher}/verify
  */
 
+var hints = {
+  standard: '/.well-known/brave-payments-verification.txt'
+
+/* not necessary, since even 404s will contain the header/trailing strings
+  squarespace: '/'
+ */
+}
+var hintsK = underscore.keys(hints)
+
 var dnsTxtResolver = async function (domain) {
   return new Promise((resolve, reject) => {
     dns.resolveTxt(domain, (err, rrset) => {
@@ -291,6 +263,16 @@ var dnsTxtResolver = async function (domain) {
       resolve(rrset)
     })
   })
+}
+
+var webResolver = async function (runtime, publisher, path) {
+  try {
+    return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true })
+  } catch (ex) {
+    if (ex.code !== 'ECONNREFUSED') throw ex
+  }
+
+  return await braveHapi.wreck.get('http://' + publisher + path)
 }
 
 var verified = async function (request, reply, runtime, entry, verified, reason) {
@@ -329,7 +311,7 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
 v1.verifyToken =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, entry, entries, i, info, j, matchP, reason, rr, rrset
+    var data, entry, entries, hint, i, info, j, matchP, reason, rr, rrset
     var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
@@ -360,6 +342,7 @@ v1.verifyToken =
     }
 
     info = { publisher: publisher }
+    data = {}
     for (i = 0; i < entries.length; i++) {
       entry = entries[i]
       info.verificationId = entry.verificationId
@@ -376,27 +359,24 @@ v1.verifyToken =
 
         return await verified(request, reply, runtime, entry, true, 'TXT RR matches')
       }
-      if (!matchP) await loser('no TXT RRs starting with ' + prefix)
+      if (!matchP) {
+        if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix)
+        matchP = false
+      }
 
-      try {
-/*
-        data = await braveHapi.wreck.get('http://' + publisher + '/.well-known/brave-payments-verification.txt')
-        if (data.toString().indexOf(entry.token) !== -1) {
-          return await verified(request, reply, runtime, entry, true, 'web file matches')
-        }
- */
-
-        try {
-          data = await braveHapi.wreck.get('https://' + publisher + '/.well-known/brave-payments-verification.txt',
-                                           { rejectUnauthorized: true })
-          if (data.toString().indexOf(entry.token) !== -1) {
-            return await verified(request, reply, runtime, entry, true, 'web file matches')
+      for (j = 0; j < hintsK.length; j++) {
+        hint = hintsK[j]
+        if (typeof data[hint] === 'undefined') {
+          try { data[hint] = (await webResolver(runtime, publisher, hints[hint])).toString() } catch (ex) {
+            data[hint] = ''
+            await loser(ex.toString())
+            continue
           }
-        } catch (ex) {
-          await loser(ex.toString())
         }
-      } catch (ex) {
-        await loser(ex.toString())
+
+        if (data[hint].indexOf(entry.token) !== -1) {
+          return await verified(request, reply, runtime, entry, true, hint + ' web file matches')
+        }
       }
     }
 
@@ -420,17 +400,18 @@ v1.verifyToken =
 
 module.exports.notify =
   async function (debug, runtime, publisher, payload) {
-// TBD: add some logging here for testing...
-
-    await braveHapi.wreck.post(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(publisher) +
-                                 '/notifications',
-                               { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
-                                 payload: JSON.stringify(payload)
-                               })
+    try {
+      await braveHapi.wreck.post(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(publisher) +
+                                   '/notifications',
+                                 { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
+                                   payload: JSON.stringify(payload)
+                                 })
+    } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
   }
 
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').whitelist().config(v1.setWallet),

@@ -8,7 +8,8 @@
     "server": "./node_modules/.bin/babel-node src/index.js",
     "start": "DEBUG=*,-babel,-mongo:*,mongo:queries ./node_modules/.bin/babel-node src/index.js",
     "test": "npm run test-security",
-    "test-security": "nsp check"
+    "test-security": "nsp check",
+    "worker": "DEBUG=*,-babel,-mongo:*,mongo:queries ./node_modules/.bin/babel-node src/worker.js"
   },
   "repository": {
     "type": "git",
@@ -56,6 +57,7 @@
     "rsmq": "^0.7.0",
     "rsmq-worker": "^0.4.1",
     "sdebug": "^0.9.0",
+    "throng": "4.0.0",
     "underscore": "1.8.3",
     "vision": "^4.0.0",
     "whois-json": "1.0.1",
