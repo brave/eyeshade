@@ -76,6 +76,7 @@ var main = async function (id) {
         })
 
         runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
+        debug('prune-publishers', { memoryUsage: process.memoryUsage(), cpuUsage: process.cpuUsage() })
       }
 
       try { await report() } catch (ex) {
@@ -83,8 +84,6 @@ var main = async function (id) {
         runtime.newrelic.noticeError(ex, payload)
       }
       runtime.newrelic.endTransaction()
-
-      debug('prune-publishers', { memoryUsage: process.memoryUsage(), cpuUsage: process.cpuUsage() })
     })
   )
 }
