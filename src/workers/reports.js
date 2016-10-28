@@ -30,7 +30,6 @@ var daily = async function (debug, runtime) {
   midnight = new Date(now)
   midnight.setHours(0, 0, 0, 0)
   midnight = Math.floor(midnight.getTime() / 1000)
-  midnight = underscore.now()
 
   try {
     await runtime.db.purgeSince(debug, runtime, midnight * 1000)

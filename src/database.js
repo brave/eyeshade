@@ -53,7 +53,6 @@ DB.prototype.purgeSince = async function (debug, runtime, timestamp) {
     GridStore.unlink(this.db._db, names, (err) => {
       if (err) return debug('purgeSince', err)
 
-      debug('purgeSince', { count: names.length })
       resolve()
     })
   })
