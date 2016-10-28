@@ -52,7 +52,7 @@ exports.workers = {
       })
 
       await file.write(JSON.stringify(results, null, 2), true)
-      runtime.notify(debug, { text: 'created ' + reportURL })
+      runtime.notify(debug, { text: 'prune-publishers completed' })
     }
 }
 

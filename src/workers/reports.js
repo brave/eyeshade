@@ -185,7 +185,7 @@ exports.workers = {
                 })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'created ' + reportURL })
+      runtime.notify(debug, { text: 'report-publishers completed' })
     },
 
 /* sent by GET /v1/reports/surveyors
@@ -218,7 +218,7 @@ exports.workers = {
       })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'created ' + reportURL })
+      runtime.notify(debug, { text: 'report-surveyors completed' })
     }
 }
 
