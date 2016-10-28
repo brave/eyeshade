@@ -223,7 +223,7 @@ var main = async function (id) {
     }
 
     debug('webserver started',
-    { server: url.format(runtime.server),
+    { server: url.format(runtime.config.server),
       protocol: server.info.protocol,
       address: server.info.address,
       port: runtime.config.server.port,
