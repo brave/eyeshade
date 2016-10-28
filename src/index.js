@@ -222,7 +222,8 @@ var main = async function (id) {
     }
 
     debug('webserver started',
-    { protocol: server.info.protocol,
+    { server: url.format(runtime.server),
+      protocol: server.info.protocol,
       address: server.info.address,
       port: runtime.config.server.port,
       version: server.version,
@@ -232,7 +233,7 @@ var main = async function (id) {
     runtime.npminfo = underscore.pick(npminfo, 'name', 'version', 'description', 'author', 'license', 'bugs', 'homepage')
     runtime.npminfo.children = {}
     runtime.notify(debug, { text: require('os').hostname() + ' ' + npminfo.name + '@' + npminfo.version +
-                                  ' started ' + (process.env.DYNO || '') + '/' + id })
+                                  ' started ' + (process.env.DYNO || 'web') + '/' + id })
 
     f(module)
     underscore.keys(children).sort().forEach(m => { runtime.npminfo.children[m] = children[m] })
