@@ -450,6 +450,7 @@ module.exports.initialize = async function (debug, runtime) {
     }
   ])
 
+  await runtime.queue.create('prune-publishers')
   await runtime.queue.create('publisher-report')
 
   resolvers = dns.getServers()
