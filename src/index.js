@@ -16,6 +16,7 @@ var debug = new (require('sdebug'))('web')
 var path = require('path')
 var routes = require('./controllers/index')
 var underscore = require('underscore')
+var url = require('url')
 var util = require('util')
 
 var npminfo = require(path.join(__dirname, '..', 'package'))
