@@ -75,7 +75,7 @@ v1.publishers =
   tags: [ 'api' ],
 
   validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('json').description(
+    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the response'
                        ),
                summary: Joi.boolean().optional().default(false).description('summarize results (CSV only)')
@@ -112,7 +112,7 @@ v1.surveyors =
   tags: [ 'api' ],
 
   validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('json').description(
+    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the response'
                        ) } },
 

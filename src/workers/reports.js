@@ -5,7 +5,7 @@ var underscore = require('underscore')
 
 var datefmt = 'yyyy-mm-dd HH:MM:ss'
 
-var create = async function (runtime, params) {
+var create = async function (runtime, prefix, params) {
   var extension, filename, options
 
   if (params.format !== 'csv') {
@@ -15,7 +15,7 @@ var create = async function (runtime, params) {
     options = { content_type: 'text/csv' }
     extension = '.csv'
   }
-  filename = 'publishers-' + dateformat(underscore.now(), datefmt) + extension
+  filename = prefix + dateformat(underscore.now(), datefmt) + extension
   options.metadata = { 'content-disposition': 'attachment; filename="' + filename + '"' }
   return await runtime.db.file(params.reportId, 'w', options)
 }
@@ -115,7 +115,7 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, fees, file, i, publishers, results, satoshis, usd
       var reportURL = payload.reportURL
-      var format = payload.format || 'json'
+      var format = payload.format || 'csv'
       var summaryP = payload.summary
 
       var slicer = async function (quantum) {
@@ -143,7 +143,7 @@ exports.workers = {
         }
       }
 
-      file = await create(runtime, payload)
+      file = await create(runtime, 'publishers-', payload)
 
       publishers = {}
       results = await quanta(debug, runtime)
@@ -201,10 +201,10 @@ exports.workers = {
   'report-surveyors':
     async function (debug, runtime, payload) {
       var data, file
-      var format = payload.format || 'json'
+      var format = payload.format || 'csv'
       var reportURL = payload.reportURL
 
-      file = await create(runtime, payload)
+      file = await create(runtime, 'surveyors-', payload)
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
       if (format !== 'csv') {

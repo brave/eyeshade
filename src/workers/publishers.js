@@ -17,7 +17,6 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var file, results, state, votes
       var reportId = payload.reportId
-      var reportURL = payload.reportURL
       var voting = runtime.db.get('voting', debug)
 
       file = await runtime.db.file(reportId, 'w', { content_type: 'application/json' })
