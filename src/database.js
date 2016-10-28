@@ -44,6 +44,9 @@ DB.prototype.purgeSince = async function (debug, runtime, timestamp) {
 
   await reports.index({ uploadDate: 1 }, { unique: false })
   entries = await reports.find({ uploadDate: { $lt: new Date(timestamp) } })
+  debug('purgeSince', { count: entries.length })
+
+  if (entries.length === 0) return
 
   names = underscore.map(entries, (entry) => { return entry._id })
   return new Promise((resolve, reject) => {

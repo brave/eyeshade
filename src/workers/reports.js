@@ -39,6 +39,7 @@ try {
   setTimeout(function () { daily(debug, runtime) }, tomorrow - now)
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
 } catch(ex) { debug('daily', ex) }
+  debug('daily', 'done.')
 }
 
 var quanta = async function (debug, runtime) {
