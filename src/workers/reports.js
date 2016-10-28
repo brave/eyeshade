@@ -27,19 +27,20 @@ var daily = async function (debug, runtime) {
 
   debug('daily', 'running')
 
-try {
   midnight = new Date(now)
   midnight.setHours(0, 0, 0, 0)
   midnight = Math.floor(midnight.getTime() / 1000)
+  midnight = underscore.now()
 
-  await runtime.db.purgeSince(debug, runtime, midnight * 1000)
-
+  try {
+    await runtime.db.purgeSince(debug, runtime, midnight * 1000)
+  } catch (ex) {
+    debug('daily', ex)
+  }
   tomorrow = new Date(now)
   tomorrow.setHours(24, 0, 0, 0)
   setTimeout(function () { daily(debug, runtime) }, tomorrow - now)
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
-} catch(ex) { debug('daily', ex) }
-  debug('daily', 'done.')
 }
 
 var quanta = async function (debug, runtime) {
