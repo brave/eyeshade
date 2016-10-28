@@ -7,6 +7,8 @@ var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
 var underscore = require('underscore')
+var url = require('url')
+var uuid = require('node-uuid')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
@@ -18,10 +20,12 @@ var prefix = 'brave-ledger-verification='
 v1.prune =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var reportId = uuid.v4().toLowerCase()
+    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
     var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'prune-publishers', {})
-    reply({})
+    await runtime.queue.send(debug, 'prune-publishers', { reportId: reportId, reportURL: reportURL })
+    reply({ reportURL: reportURL })
   }
 },
 
@@ -38,7 +42,7 @@ v1.prune =
     { query: {} },
 
   response:
-    { schema: Joi.object().length(0) }
+    { schema: Joi.object().keys().unknown(true) }
 }
 
 /*

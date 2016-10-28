@@ -1,5 +1,5 @@
 module.exports =
-{ port                  : process.env.PORT
+{ server                : require('url').parse('https://' + process.env.HOSTNAME + ':' + process.env.PORT)
 , database              :
   { mongo               : process.env.MONGODB_URI }
 , queue                 :

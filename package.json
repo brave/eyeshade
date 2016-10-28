@@ -1,6 +1,6 @@
 {
   "name": "eyeshade",
-  "version": "0.8.89",
+  "version": "0.9.1",
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
@@ -37,6 +37,7 @@
     "currency-codes": "1.1.2",
     "dateformat": "1.0.12",
     "github": "0.2.4",
+    "gridfs-stream": "1.1.1",
     "hapi": "^12.1.0",
     "hapi-async-handler": "^1.0.3",
     "hapi-auth-bearer-token": "4.3.0",
@@ -47,7 +48,7 @@
     "json-stringify-safe": "^5.0.1",
     "json2csv": "^3.6.2",
     "ledger-publisher": "^0.8.90",
-    "mongodb": "1.4.39",
+    "mongodb": "^2.1.18",
     "monk": "https://github.com/brave/monk.git",
     "netmask": "1.0.6",
     "newrelic": "1.23.1",

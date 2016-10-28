@@ -1,12 +1,56 @@
+var boom = require('boom')
 var braveHapi = require('../brave-hapi')
 var bson = require('bson')
 var dateformat = require('dateformat')
 var Joi = require('joi')
 var json2csv = require('json2csv')
+var Readable = require('stream').Readable
 var underscore = require('underscore')
 
 var v1 = {}
 var datefmt = 'yyyy-mm-dd HH:MM:ss'
+
+/*
+   GET /v1/reports/file/{reportId}
+ */
+
+v1.getFile =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var file, reader, writer
+    var debug = braveHapi.debug(module, request)
+    var reportId = request.params.reportId
+
+    file = await runtime.db.file(reportId, 'r')
+/*
+    if (!file) return reply(boom.notFound('no such report: ' + reportId))
+ */
+
+    reader = runtime.db.source({ filename: reportId })
+    reader.on('error', (err) => {
+      debug('getFile error', err)
+      reply(boom.notFound('no such report: ' + reportId))
+    }).on('open', () => {
+      debug('getFile open', underscore.pick(file, [ 'contentType', 'metadata' ]))
+      writer = reply(new Readable().wrap(reader))
+      if (file.contentType) {
+        console.log('contentType=' + file.contentType)
+        writer = writer.type(file.contentType)
+      }
+      underscore.keys(file.metadata || {}).forEach((header) => {
+        console.log('header= ' + header + ': ' + file.metadata[header])
+        writer = writer.header(header, file.metadata[header])
+      })
+    })
+  }
+},
+
+  description: 'Gets a report file',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { reportId: Joi.string().guid().required().description('the report identifier') } }
+}
 
 /*
    GET /v1/reports/publishers
@@ -104,6 +148,10 @@ v1.publishers =
   response:
     { schema: Joi.alternatives().try(Joi.array().min(0).items(Joi.object().keys().unknown(true)), Joi.string()) }
 }
+
+/*
+   GET /v1/reports/surveyors
+ */
 
 v1.surveyors =
 { handler: function (runtime) {
@@ -222,6 +270,7 @@ var quanta = async function (debug, runtime) {
 }
 
 module.exports.routes = [
+  braveHapi.routes.async().path('/v1/reports/file/{reportId}').config(v1.getFile),
   braveHapi.routes.async().path('/v1/reports/publishers').config(v1.publishers),
   braveHapi.routes.async().path('/v1/reports/surveyors').config(v1.surveyors)
 ]

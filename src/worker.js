@@ -33,7 +33,8 @@ var main = async function (id) {
 
     { queue            : 'prune-publishers'
     , message          :
-      {
+      { reportId       : '...'
+      , reportURL      : '...'
       }
     }
  */
@@ -43,8 +44,12 @@ var main = async function (id) {
       if (err) return debug('prune-publishers listen', err)
 
       report = async function () {
-        var results, state, votes
+        var file, results, state, votes
+        var reportId = payload.reportId
+        var reportURL = payload.reportURL
         var voting = runtime.db.get('voting', debug)
+
+        file = await runtime.db.file(reportId, 'w', { content_type: 'application/json' })
 
         votes = await voting.aggregate([
             { $match: { counts: { $gt: 0 },
@@ -75,7 +80,8 @@ var main = async function (id) {
           await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
         })
 
-        runtime.notify(debug, { text: 'pruned ' + JSON.stringify(results, null, 2) })
+        await file.write(JSON.stringify(results, null, 2), true)
+        runtime.notify(debug, { text: 'created ' + reportURL })
       }
 
       try { await report() } catch (ex) {
