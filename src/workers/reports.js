@@ -1,6 +1,7 @@
 var bson = require('bson')
 var dateformat = require('dateformat')
 var json2csv = require('json2csv')
+const moment = require('moment')
 var underscore = require('underscore')
 
 var datefmt = 'yyyy-mm-dd HH:MM:ss'
@@ -18,6 +19,24 @@ var create = async function (runtime, prefix, params) {
   filename = prefix + dateformat(underscore.now(), datefmt) + extension
   options.metadata = { 'content-disposition': 'attachment; filename="' + filename + '"' }
   return await runtime.db.file(params.reportId, 'w', options)
+}
+
+var daily = async function (debug, runtime) {
+  var midnight, tomorrow
+  var now = underscore.now()
+
+  debug('daily', 'running')
+
+  midnight = new Date(now)
+  midnight.setHours(0, 0, 0, 0)
+  midnight = Math.floor(midnight.getTime() / 1000)
+
+  await runtime.db.purgeSince(debug, runtime, midnight * 1000)
+
+  tomorrow = new Date(now)
+  tomorrow.setHours(24, 0, 0, 0)
+  setTimeout(function () { daily(debug, runtime) }, tomorrow - now)
+  debug('daily', 'running again ' + moment(tomorrow).fromNow())
 }
 
 var quanta = async function (debug, runtime) {
@@ -98,6 +117,12 @@ var quanta = async function (debug, runtime) {
 }
 
 var exports = {}
+
+exports.initialize = async function (debug, runtime) {
+  if ((typeof process.env.DYNO === 'undefined') || (process.env.DYNO === 'worker.1')) {
+    setTimeout(function () { daily(debug, runtime) }, 5 * 1000)
+  }
+}
 
 exports.workers = {
 /* sent by GET /v1/reports/publishers

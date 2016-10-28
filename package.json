@@ -48,6 +48,7 @@
     "json-stringify-safe": "^5.0.1",
     "json2csv": "^3.6.2",
     "ledger-publisher": "^0.8.90",
+    "moment": "^2.13.0",
     "mongodb": "^2.1.18",
     "monk": "https://github.com/brave/monk.git",
     "netmask": "1.0.6",
