@@ -24,7 +24,7 @@ var runtime = require('./runtime.js')
 runtime.newrelic = newrelic
 
 var server = new Hapi.Server()
-server.connection({ port: runtime.config.server.port })
+server.connection({ port: process.env.PORT })
 
 debug.initialize({ web: { id: server.info.id } })
 
@@ -222,11 +222,12 @@ var main = async function (id) {
       throw err
     }
 
+    debug('webserver started', server.info)
     debug('webserver started',
     { server: url.format(runtime.config.server),
       protocol: server.info.protocol,
       address: server.info.address,
-      port: runtime.config.server.port,
+      port: server.info.port,
       version: server.version,
       env: underscore.pick(process.env,
                            [ 'BITGO_CUSTOM_ROOT_URI', 'BITGO_ENVIRONMENT', 'DEBUG', 'DYNO', 'NEW_RELIC_APP_NAME', 'NODE_ENV' ])
