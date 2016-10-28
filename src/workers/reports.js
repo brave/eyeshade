@@ -27,6 +27,7 @@ var daily = async function (debug, runtime) {
 
   debug('daily', 'running')
 
+try {
   midnight = new Date(now)
   midnight.setHours(0, 0, 0, 0)
   midnight = Math.floor(midnight.getTime() / 1000)
@@ -37,6 +38,7 @@ var daily = async function (debug, runtime) {
   tomorrow.setHours(24, 0, 0, 0)
   setTimeout(function () { daily(debug, runtime) }, tomorrow - now)
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
+} catch(ex) { debug('daily', ex) }
 }
 
 var quanta = async function (debug, runtime) {
