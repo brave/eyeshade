@@ -286,8 +286,8 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
   var tokens = runtime.db.get('tokens', debug)
 
   message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
-  debug(verified ? 'verified' : 'not verified', message)
-  runtime.notify(debug, { channel: '#publishers-bot', text: 'verified ' + JSON.stringify(message) })
+  debug('verified', message)
+  runtime.notify(debug, { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified ' + JSON.stringify(message) })
 
   entry.verified = verified
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
