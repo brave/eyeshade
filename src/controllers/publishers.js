@@ -269,12 +269,12 @@ var dnsTxtResolver = async function (domain) {
   })
 }
 
-var webResolver = async function (runtime, publisher, path) {
+var webResolver = async function (debug, runtime, publisher, path) {
   try {
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true })
   } catch (ex) {
+    debug('webResolver', ex)
     if (ex.code !== 'ECONNREFUSED') throw ex
-    console.log(JSON.stringify(ex, null, 2))
   }
 
   return await braveHapi.wreck.get('http://' + publisher + path)
@@ -372,7 +372,7 @@ v1.verifyToken =
       for (j = 0; j < hintsK.length; j++) {
         hint = hintsK[j]
         if (typeof data[hint] === 'undefined') {
-          try { data[hint] = (await webResolver(runtime, publisher, hints[hint])).toString() } catch (ex) {
+          try { data[hint] = (await webResolver(debug, runtime, publisher, hints[hint])).toString() } catch (ex) {
             data[hint] = ''
             await loser(ex.toString())
             continue
