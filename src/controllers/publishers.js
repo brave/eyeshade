@@ -274,6 +274,7 @@ var webResolver = async function (runtime, publisher, path) {
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true })
   } catch (ex) {
     if (ex.code !== 'ECONNREFUSED') throw ex
+    console.log(JSON.stringify(ex, null, 2))
   }
 
   return await braveHapi.wreck.get('http://' + publisher + path)
