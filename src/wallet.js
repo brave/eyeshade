@@ -138,6 +138,7 @@ var maintenance = async function (config) {
     })
 
     Wallet.prototype.rates = rates
+    debug('BTC key rates', underscore.pick(rates, [ 'USD', 'EUR', 'GBP' ]))
   } catch (ex) {
     debug('maintenance error', ex)
   }
