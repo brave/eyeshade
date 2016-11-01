@@ -8,6 +8,10 @@ module.exports =
   { bitgo               :
     { environment       : process.env.BITGO_ENVIRONMENT
     }
+  , bitcoin_average     :
+    { publicKey         : process.env.BITCOIN_AVERAGE_PUBLIC_KEY
+    , secretKey         : process.env.BITCOIN_AVERAGE_SECRET_KEY
+    }
   }
 , publishers            :
   { url                 : process.env.PUBLISHERS_URL
