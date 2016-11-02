@@ -92,17 +92,53 @@ v1.getBalance =
 
   validate:
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency'),
+      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
                access_token: Joi.string().guid().optional() }
     },
 
   response:
     { schema: Joi.object().keys(
-      { amount: Joi.number().min(0).optional().description('the balance in the payment currency'),
-        currency: braveJoi.string().currencyCode().optional().default('USD').description('the payment currency'),
+      { amount: Joi.number().min(0).optional().description('the balance in the fiat currency'),
+        currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
         satoshis: Joi.number().integer().min(0).optional().description('the balance in satoshis')
       })
     }
+}
+
+/*
+   GET /v1/publishers/{publisher}/status
+ */
+
+v1.getStatus =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var entry
+    var publisher = request.params.publisher
+    var debug = braveHapi.debug(module, request)
+    var publishers = runtime.db.get('publishers', debug)
+
+    entry = await publishers.findOne({ publisher: publisher })
+    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+
+    reply(underscore.pick(entry, [ 'address', 'authorized' ]))
+  }
+},
+
+  auth:
+    { strategy: 'simple',
+      mode: 'required'
+    },
+
+  description: 'Gets a verification token for a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { access_token: Joi.string().guid().optional() }
+    },
+
+  response:
+    { schema: Joi.object().keys().unknown(true).description('the publisher status') }
 }
 
 /*
@@ -423,7 +459,7 @@ module.exports.notify =
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
-  braveHapi.routes.async().post().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
+  braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').whitelist().config(v1.setWallet),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken),
