@@ -280,7 +280,7 @@ var webResolver = async function (debug, runtime, publisher, path) {
   return await braveHapi.wreck.get('http://' + publisher + path)
 }
 
-var verified = async function (request, reply, runtime, entry, verified, reason) {
+var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
   var message, payload, state
   var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
@@ -288,7 +288,10 @@ var verified = async function (request, reply, runtime, entry, verified, reason)
 
   message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
   debug('verified', message)
-  runtime.notify(debug, { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified ' + JSON.stringify(message) })
+  if ((backgroundP) && (!verified)) {
+    runtime.notify(debug,
+                   { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified ' + JSON.stringify(message) })
+  }
 
   entry.verified = verified
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
@@ -318,6 +321,7 @@ v1.verifyToken =
   return async function (request, reply) {
     var data, entry, entries, hint, i, info, j, matchP, reason, rr, rrset
     var publisher = request.params.publisher
+    var backgroundP = request.query.backgroundP
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
@@ -343,7 +347,7 @@ v1.verifyToken =
 
     var loser = async function (reason) {
       debug('verify', underscore.extend(info, { reason: reason }))
-      await verified(request, reply, runtime, entry, false, reason)
+      await verified(request, reply, runtime, entry, false, backgroundP, reason)
     }
 
     info = { publisher: publisher }
@@ -362,7 +366,7 @@ v1.verifyToken =
           continue
         }
 
-        return await verified(request, reply, runtime, entry, true, 'TXT RR matches')
+        return await verified(request, reply, runtime, entry, true, backgroundP, 'TXT RR matches')
       }
       if (!matchP) {
         if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix)
@@ -380,7 +384,7 @@ v1.verifyToken =
         }
 
         if (data[hint].indexOf(entry.token) !== -1) {
-          return await verified(request, reply, runtime, entry, true, hint + ' web file matches')
+          return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
         }
       }
     }
@@ -393,7 +397,9 @@ v1.verifyToken =
   tags: [ 'api' ],
 
   validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') } },
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { backgroundP: Joi.boolean().optional().default(false).description('running in the background') }
+    },
 
   response:
     { schema: Joi.object().keys(
