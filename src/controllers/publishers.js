@@ -87,7 +87,7 @@ v1.getBalance =
       mode: 'required'
     },
 
-  description: 'Gets a verification token for a publisher',
+  description: 'Gets the balance for a verified publisher',
   tags: [ 'api' ],
 
   validate:
@@ -129,7 +129,7 @@ v1.getStatus =
       mode: 'required'
     },
 
-  description: 'Gets a verification token for a publisher',
+  description: 'Gets the status for a verified publisher',
   tags: [ 'api' ],
 
   validate:
