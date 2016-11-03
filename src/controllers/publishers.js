@@ -449,12 +449,16 @@ v1.verifyToken =
 
 var notify =
   async function (debug, runtime, publisher, payload) {
+    var combo = underscore.extend({ publisher: publisher }, payload)
+
     try {
       await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
                                    '/notifications',
                                  { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
                                    payload: JSON.stringify(payload)
                                  })
+      debug('notify', combo)
+      runtime.notify(debug, JSON.stringify(combo))
     } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
   }
 
