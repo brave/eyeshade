@@ -246,6 +246,7 @@ v1.patchPublisher =
     var authority, entry, state
     var publisher = request.params.publisher
     var payload = request.payload
+    var authorized = payload.authorized
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
@@ -258,6 +259,7 @@ v1.patchPublisher =
             }
     await publishers.update({ publisher: publisher }, state, { upsert: true })
 
+    if (authorized) notify(debug, runtime, publisher, { type: 'payments_activated' })
     reply({})
   }
 },
@@ -445,10 +447,10 @@ v1.verifyToken =
     }
 }
 
-module.exports.notify =
+var notify =
   async function (debug, runtime, publisher, payload) {
     try {
-      await braveHapi.wreck.post(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(publisher) +
+      await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
                                    '/notifications',
                                  { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
                                    payload: JSON.stringify(payload)
