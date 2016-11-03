@@ -324,7 +324,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
 
   message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
   debug('verified', message)
-  if ((backgroundP) && (!verified)) {
+  if ((!backgroundP) || (verified)) {
     runtime.notify(debug,
                    { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified ' + JSON.stringify(message) })
   }
