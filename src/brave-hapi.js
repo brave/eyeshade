@@ -143,6 +143,7 @@ var WreckPost = async function (server, opts) {
   var params = WreckProxy(server, opts)
 
   return new Promise((resolve, reject) => {
+console.log('\n\n' + JSON.stringify(params, null, 2) + '\n\n')
     wreck.post(params.server, params.opts, (err, response, body) => {
       if (err) return reject(err)
 
