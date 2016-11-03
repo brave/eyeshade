@@ -460,7 +460,7 @@ var notify =
 
       message = underscore.extend({ publisher: publisher }, payload)
       debug('notify', message)
-      runtime.notify(debug, { channel: '#publishers-bot', text: JSON.stringify(message) })
+      runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
     } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
   }
 
