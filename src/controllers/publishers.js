@@ -456,7 +456,8 @@ var notify = async function (debug, runtime, publisher, payload) {
                                { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token,
                                             'content-type': 'application/json'
                                           },
-                                 payload: JSON.stringify(payload)
+                                 payload: JSON.stringify(payload),
+                                 proxyP: true
                                })
 
     message = underscore.extend({ publisher: publisher }, payload)
