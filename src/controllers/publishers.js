@@ -447,22 +447,23 @@ v1.verifyToken =
     }
 }
 
-var notify =
-  async function (debug, runtime, publisher, payload) {
-    var message
+var notify = async function (debug, runtime, publisher, payload) {
+  var message
 
-    try {
-      await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
-                                   '/notifications',
-                                 { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
-                                   payload: JSON.stringify(payload)
-                                 })
+  try {
+    await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
+                                 '/notifications',
+                               { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token,
+                                            'content-type': 'application/json'
+                                          },
+                                 payload: JSON.stringify(payload)
+                               })
 
-      message = underscore.extend({ publisher: publisher }, payload)
-      debug('notify', message)
-      runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
-    } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
-  }
+    message = underscore.extend({ publisher: publisher }, payload)
+    debug('notify', message)
+    runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
+  } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
+}
 
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
