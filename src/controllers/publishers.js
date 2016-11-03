@@ -457,7 +457,7 @@ var notify = async function (debug, runtime, publisher, payload) {
                                             'content-type': 'application/json'
                                           },
                                  payload: JSON.stringify(payload),
-                                 proxyP: true
+                                 useProxyP: true
                                })
 
     message = underscore.extend({ publisher: publisher }, payload)
