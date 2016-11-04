@@ -346,7 +346,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
                                        payload: JSON.stringify(payload)
                                      })
     if (Buffer.isBuffer(result)) result = JSON.parse(result)
-    debug('patch', result.toString())
+    debug('patch', JSON.stringify(result, null, 2))
   } catch (ex) {
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
@@ -462,7 +462,7 @@ var notify = async function (debug, runtime, publisher, payload) {
                                         useProxyP: true
                                       })
     if (Buffer.isBuffer(result)) result = JSON.parse(result)
-    debug('patch', result.toString())
+    debug('post', JSON.stringify(result, null, 2))
 
     message = underscore.extend({ publisher: publisher }, payload)
     debug('notify', message)
