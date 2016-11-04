@@ -319,7 +319,7 @@ var webResolver = async function (debug, runtime, publisher, path) {
 }
 
 var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
-  var message, payload, state
+  var message, payload, result, state
   var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
   var tokens = runtime.db.get('tokens', debug)
@@ -340,11 +340,12 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   reason = reason || (verified ? 'ok' : 'unknown')
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
   try {
-    await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' + encodeURIComponent(entry.publisher) +
-                                  '/verifications',
-                                { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
-                                  payload: JSON.stringify(payload)
-                                })
+    result = await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' +
+                                         encodeURIComponent(entry.publisher) + '/verifications',
+                                         { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
+                                       payload: JSON.stringify(payload)
+                                     })
+    debug('patch', result)
   } catch (ex) {
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
@@ -448,17 +449,18 @@ v1.verifyToken =
 }
 
 var notify = async function (debug, runtime, publisher, payload) {
-  var message
+  var message, result
 
   try {
-    await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
-                                 '/notifications',
-                               { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token,
-                                            'content-type': 'application/json'
-                                          },
-                                 payload: JSON.stringify(payload),
-                                 useProxyP: true
-                               })
+    result = await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
+                                        '/notifications',
+                                      { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token,
+                                                   'content-type': 'application/json'
+                                                 },
+                                        payload: JSON.stringify(payload),
+                                        useProxyP: true
+                                      })
+    debug('post', result)
 
     message = underscore.extend({ publisher: publisher }, payload)
     debug('notify', message)
