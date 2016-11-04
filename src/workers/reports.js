@@ -142,7 +142,6 @@ exports.workers = {
   'report-publishers':
     async function (debug, runtime, payload) {
       var data, fees, file, i, publishers, results, satoshis, usd
-      var reportURL = payload.reportURL
       var format = payload.format || 'csv'
       var summaryP = payload.summary
 
@@ -185,7 +184,7 @@ exports.workers = {
       results = underscore.sortBy(results, 'publisher')
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
-        return runtime.notify(debug, { text: 'created ' + reportURL })
+        return runtime.notify(debug, { text: 'report-publishers completed' })
       }
 
       usd = runtime.wallet.rates.USD
@@ -230,14 +229,13 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, file
       var format = payload.format || 'csv'
-      var reportURL = payload.reportURL
 
       file = await create(runtime, 'surveyors-', payload)
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { text: 'created ' + reportURL })
+        return runtime.notify(debug, { text: 'report-publishers completed' })
       }
 
       data.forEach((result) => {

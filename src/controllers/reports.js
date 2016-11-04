@@ -1,10 +1,14 @@
 var boom = require('boom')
 var braveHapi = require('../brave-hapi')
+var dateformat = require('dateformat')
+var json2csv = require('json2csv')
 var Joi = require('joi')
 var Readable = require('stream').Readable
 var underscore = require('underscore')
 var url = require('url')
 var uuid = require('node-uuid')
+
+var datefmt = 'yyyy-mm-dd HH:MM:ss'
 
 var v1 = {}
 
@@ -49,10 +53,12 @@ v1.getFile =
 }
 
 /*
-   GET /v1/reports/publishers
+   GET /v1/reports/publishers/contributions
  */
 
-v1.publishers =
+v1.publishers = {}
+
+v1.publishers.contributions =
 { handler: function (runtime) {
   return async function (request, reply) {
     var reportId = uuid.v4().toLowerCase()
@@ -76,9 +82,55 @@ v1.publishers =
 
   validate:
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
+                         'the format of the report'
+                       )
+              } }
+}
+
+v1.publishers.status =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var data, entries, filename
+    var debug = braveHapi.debug(module, request)
+    var format = request.query.format || 'csv'
+    var publishers = runtime.db.get('publishers', debug)
+    var tokens = runtime.db.get('tokens', debug)
+
+    data = {}
+    entries = await tokens.find()
+    entries.forEach(async function (entry) {
+      var datum, publisher
+
+      publisher = entry.publisher
+      if (!publisher) return
+
+      if (!data[publisher]) data[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
+      if (entry.verified) underscore.extend(data[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
+
+      datum = await publishers.findOne({ publisher: publisher })
+      if (datum) underscore.extend(data[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
+    })
+
+    if (format !== 'csv') return reply(data)
+
+    filename = 'publishers-' + dateformat(underscore.now(), datefmt) + '.csv'
+    reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename="' + filename + '"')
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Returns information about publisher status',
+  tags: [ 'api' ],
+
+  validate:
+    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the response'
-                       ),
-               summary: Joi.boolean().optional().default(false).description('summarize results (CSV only)')
+                       )
               } },
 
   response:
@@ -89,7 +141,9 @@ v1.publishers =
    GET /v1/reports/surveyors
  */
 
-v1.surveyors =
+v1.surveyors = {}
+
+v1.surveyors.contributions =
 { handler: function (runtime) {
   return async function (request, reply) {
     var reportId = uuid.v4().toLowerCase()
@@ -113,7 +167,7 @@ v1.surveyors =
 
   validate:
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the response'
+                         'the format of the report'
                        ) } },
 
   response:
@@ -122,8 +176,9 @@ v1.surveyors =
 
 module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/file/{reportId}').config(v1.getFile),
-  braveHapi.routes.async().path('/v1/reports/publishers').config(v1.publishers),
-  braveHapi.routes.async().path('/v1/reports/surveyors').config(v1.surveyors)
+  braveHapi.routes.async().path('/v1/reports/publishers/contributions').config(v1.publishers.contributions),
+  braveHapi.routes.async().path('/v1/reports/publishers/status').config(v1.publishers.status),
+  braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
 ]
 
 module.exports.initialize = async function (debug, runtime) {
