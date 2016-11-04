@@ -118,10 +118,12 @@ v1.publishers.status =
 
       if (!datum) return
 
+    try {
       datum.created = new Date(parseInt(datum._id.substring(0, 8), 16) * 1000)
       datum.modified = new Date((datum.timestamp.high_ * 1000) + datum.timestamp._low_).toISOString()
       results[publisher] = underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp' ]))
       debug('status', results[publisher])
+    } catch(ex) { console.log(ex) }
     })
 
     if (format !== 'csv') return reply(results)
