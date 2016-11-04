@@ -108,24 +108,28 @@ v1.publishers.status =
       if (!publisher) return
 
       if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
-      if (!summaryP) {
-        if (!results[publisher].history) results[publisher].history = []
-        results[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'timestamp' ]))
-      }
       if (entry.verified) underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
+      if (summaryP) return
+
+      if (!results[publisher].history) results[publisher].history = []
+      entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+      results[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'modified' ]))
     })
+
+    data = []
     underscore.keys(results).forEach(async function (publisher) {
       var datum = await publishers.findOne({ publisher: publisher })
 
-      if (!datum) return
+      if (results[publisher].history) results[publisher].history = underscore.sortBy(results[publisher].history, 'modified')
 
-    try {
+      if (!datum) return data.push(results[publisher])
+
       datum.created = new Date(parseInt(datum._id.toHexString().substring(0, 8), 16) * 1000).getTime()
       datum.modified = (datum.timestamp.high_ * 1000) + (datum.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
-      results[publisher] = underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp' ]))
+      data.push(underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp' ])))
       debug('status', results[publisher])
-    } catch (ex) { console.log(ex) }
     })
+    results = underscore.sortBy(data, 'publisher')
 
     if (format !== 'csv') return reply(results)
 
@@ -154,12 +158,9 @@ v1.publishers.status =
                          'the format of the response'
                        ),
                summary: Joi.boolean().optional().default(true).description('summarize report')
-              } }
-/*
-,
+              } },
   response:
-    { schema: Joi.object().keys().unknown(true) }
- */
+    { schema: Joi.array().items(Joi.object().keys().unknown(true)) }
 }
 
 /*
