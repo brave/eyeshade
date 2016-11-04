@@ -125,6 +125,9 @@ var maintenance = async function (config, runtime) {
     url = 'https://apiv2.bitcoinaverage.com/indices/global/ticker/all?crypto=BTC'
     signature = prefix + '.' + suffix
     result = await braveHapi.wreck.get(url, { headers: { 'x-signature': signature } })
+    if (Buffer.isBuffer(result)) result = result.toString()
+// courtesy of https://stackoverflow.com/questions/822452/strip-html-from-text-javascript#822464
+    if (result.indexOf('<html>') !== -1) throw new Error(result.replace(/<(?:.|\n)*?>/gm, ''))
     result = JSON.parse(result)
     validity = Joi.validate(result, schema)
     if (validity.error) throw new Error(validity.error)
