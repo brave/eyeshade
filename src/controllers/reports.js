@@ -1,4 +1,5 @@
 var boom = require('boom')
+var bson = require('bson')
 var braveHapi = require('../brave-hapi')
 var dateformat = require('dateformat')
 var json2csv = require('json2csv')
@@ -119,11 +120,11 @@ v1.publishers.status =
       if (!datum) return
 
     try {
-      datum.created = new Date(parseInt(datum._id.substring(0, 8), 16) * 1000)
-      datum.modified = new Date((datum.timestamp.high_ * 1000) + datum.timestamp._low_).toISOString()
+      datum.created = new Date(parseInt(datum._id.toHexString().substring(0, 8), 16) * 1000).getTime()
+      datum.modified = (datum.timestamp.high_ * 1000) + (datum.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
       results[publisher] = underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp' ]))
       debug('status', results[publisher])
-    } catch(ex) { console.log(ex) }
+    } catch (ex) { console.log(ex) }
     })
 
     if (format !== 'csv') return reply(results)
