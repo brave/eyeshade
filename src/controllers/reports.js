@@ -91,14 +91,14 @@ v1.publishers.contributions =
 v1.publishers.status =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, entries, filename
+    var data, entries, filename, results
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'csv'
     var summaryP = request.query.summary
     var publishers = runtime.db.get('publishers', debug)
     var tokens = runtime.db.get('tokens', debug)
 
-    data = {}
+    results = {}
     entries = await tokens.find()
     entries.forEach(async function (entry) {
       var publisher
@@ -106,21 +106,27 @@ v1.publishers.status =
       publisher = entry.publisher
       if (!publisher) return
 
-      if (!data[publisher]) data[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
+      if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
       if (!summaryP) {
-        if (!data[publisher].history) data[publisher].history = []
-        data[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'timestamp' ]))
+        if (!results[publisher].history) results[publisher].history = []
+        results[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'timestamp' ]))
       }
-      if (entry.verified) underscore.extend(data[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
+      if (entry.verified) underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
     })
-    underscore.keys(data).forEach(async function (publisher) {
+    underscore.keys(results).forEach(async function (publisher) {
       var datum = await publishers.findOne({ publisher: publisher })
 
       debug('status', datum ? underscore.pick(datum, [ 'address', 'authorized' ]) : 'nil')
-      if (datum) underscore.extend(data[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
+      if (datum) results[publisher] = underscore.extend(data[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
     })
 
-    if (format !== 'csv') return reply(data)
+    if (format !== 'csv') return reply(results)
+
+    data = []
+    results.forEach((result) => {
+      data.push(underscore.omit(result, [ 'history' ]))
+      if (!summaryP) result.history.forEach((entry) => { data.push(underscore.extend({ publisher: result.publisher }, entry)) })
+    })
 
     filename = 'publishers-' + dateformat(underscore.now(), datefmt) + '.csv'
     reply(json2csv({ data: data })).type('text/csv').header('content-disposition', 'attachment; filename="' + filename + '"')
