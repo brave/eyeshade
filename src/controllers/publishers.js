@@ -345,7 +345,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
                                          { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
                                        payload: JSON.stringify(payload)
                                      })
-    debug('patch', result)
+    debug('patch', result.toString())
   } catch (ex) {
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
   }
@@ -460,7 +460,7 @@ var notify = async function (debug, runtime, publisher, payload) {
                                         payload: JSON.stringify(payload),
                                         useProxyP: true
                                       })
-    debug('post', result)
+    debug('post', result.toString())
 
     message = underscore.extend({ publisher: publisher }, payload)
     debug('notify', message)
