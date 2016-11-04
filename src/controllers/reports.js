@@ -83,7 +83,8 @@ v1.publishers.contributions =
   validate:
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the report'
-                       )
+                       ),
+               summary: Joi.boolen().optional().default(true).description('summarize report')
               } }
 }
 
@@ -93,6 +94,7 @@ v1.publishers.status =
     var data, entries, filename
     var debug = braveHapi.debug(module, request)
     var format = request.query.format || 'csv'
+    var summaryP = request.query.summary
     var publishers = runtime.db.get('publishers', debug)
     var tokens = runtime.db.get('tokens', debug)
 
@@ -105,6 +107,10 @@ v1.publishers.status =
       if (!publisher) return
 
       if (!data[publisher]) data[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
+      if (!summaryP) {
+        if (!data[publisher].history) data[publisher].history = []
+        data[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'timestamp' ]))
+      }
       if (entry.verified) underscore.extend(data[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
 
       datum = await publishers.findOne({ publisher: publisher })
@@ -130,11 +136,14 @@ v1.publishers.status =
   validate:
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the response'
-                       )
-              } },
-
+                       ),
+               summary: Joi.boolen().optional().default(true).description('summarize report')
+              } }
+/*
+,
   response:
     { schema: Joi.object().keys().unknown(true) }
+ */
 }
 
 /*
