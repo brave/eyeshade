@@ -342,7 +342,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   try {
     result = await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' +
                                          encodeURIComponent(entry.publisher) + '/verifications',
-                                         { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token },
+                                         { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
                                        payload: JSON.stringify(payload)
                                      })
     if (Buffer.isBuffer(result)) result = JSON.parse(result)
@@ -455,7 +455,7 @@ var notify = async function (debug, runtime, publisher, payload) {
   try {
     result = await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
                                         '/notifications',
-                                      { headers: { authorization: 'bearer ' + runtime.config.publishers.access_token,
+                                      { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token,
                                                    'content-type': 'application/json'
                                                  },
                                         payload: JSON.stringify(payload),
