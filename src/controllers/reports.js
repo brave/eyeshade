@@ -84,7 +84,7 @@ v1.publishers.contributions =
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the report'
                        ),
-               summary: Joi.boolen().optional().default(true).description('summarize report')
+               summary: Joi.boolean().optional().default(true).description('summarize report')
               } }
 }
 
@@ -101,7 +101,7 @@ v1.publishers.status =
     data = {}
     entries = await tokens.find()
     entries.forEach(async function (entry) {
-      var datum, publisher
+      var publisher
 
       publisher = entry.publisher
       if (!publisher) return
@@ -112,8 +112,11 @@ v1.publishers.status =
         data[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'timestamp' ]))
       }
       if (entry.verified) underscore.extend(data[publisher], underscore.pick(entry, [ 'verified', 'verificationId' ]))
+    })
+    underscore.keys(data).forEach(async function (publisher) {
+      var datum = await publishers.findOne({ publisher: publisher })
 
-      datum = await publishers.findOne({ publisher: publisher })
+      debug('status', datum ? underscore.pick(datum, [ 'address', 'authorized' ]) : 'nil')
       if (datum) underscore.extend(data[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
     })
 
