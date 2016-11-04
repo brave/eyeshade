@@ -116,8 +116,8 @@ v1.publishers.status =
     underscore.keys(results).forEach(async function (publisher) {
       var datum = await publishers.findOne({ publisher: publisher })
 
-      debug('status', datum ? underscore.pick(datum, [ 'address', 'authorized' ]) : 'nil')
-      if (datum) results[publisher] = underscore.extend(data[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
+      debug('status', datum || 'nil')
+      if (datum) results[publisher] = underscore.extend(results[publisher], underscore.pick(datum, [ 'address', 'authorized' ]))
     })
 
     if (format !== 'csv') return reply(results)
