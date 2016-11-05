@@ -312,7 +312,7 @@ exports.workers = {
           if (results[publisher].address) results[publisher].address = 'yes'
           if (results[publisher].email) results[publisher].email = 'yes'
           if (results[publisher].phone) results[publisher].phone = 'yes'
-          if (results[publisher].phone) results[publisher].legalFormURL = 'yes'
+          if (results[publisher].legalFormURL) results[publisher].legalFormURL = 'yes'
         }
 
         data.push(results[publisher])
