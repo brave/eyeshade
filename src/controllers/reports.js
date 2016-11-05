@@ -110,6 +110,7 @@ v1.publishers.status =
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the response'
                        ),
+               elide: Joi.boolean().optional().default(true).description('elide contact information'),
                summary: Joi.boolean().optional().default(true).description('summarize report')
               } },
 

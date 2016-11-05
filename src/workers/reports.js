@@ -227,6 +227,7 @@ exports.workers = {
       { reportId       : '...'
       , reportURL      : '...'
       , format         : 'json' | 'csv'
+      , elide          :  true  | false
       , summary        :  true  | false
       }
     }
@@ -235,6 +236,7 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, entries, f, fields, file, i, keys, results, satoshis, summary, usd
       var format = payload.format || 'csv'
+      var elideP = payload.elide
       var summaryP = payload.summary
       var publishers = runtime.db.get('publishers', debug)
       var tokens = runtime.db.get('tokens', debug)
@@ -306,6 +308,13 @@ exports.workers = {
           }
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
+        if (elideP) {
+          if (results[publisher].address) results[publisher].address = 'yes'
+          if (results[publisher].email) results[publisher].email = 'yes'
+          if (results[publisher].phone) results[publisher].phone = 'yes'
+          if (results[publisher].phone) results[publisher].legalFormURL = 'yes'
+        }
+
         data.push(results[publisher])
       }
       data = []
@@ -322,8 +331,8 @@ exports.workers = {
       data = []
       results.forEach((result) => {
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-                                    { created: dateformat(result.created, datefmt),
-                                      modified: dateformat(result.modified, datefmt)
+                                    { created: result.created && dateformat(result.created, datefmt),
+                                      modified: result.modified && dateformat(result.modified, datefmt)
                                     }))
         if (!summaryP) {
           result.history.forEach((entry) => {
