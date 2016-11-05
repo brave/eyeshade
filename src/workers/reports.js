@@ -1,8 +1,13 @@
 var bson = require('bson')
+var braveHapi = require('../brave-hapi')
+var currencyCodes = require('currency-codes')
 var dateformat = require('dateformat')
 var json2csv = require('json2csv')
 const moment = require('moment')
 var underscore = require('underscore')
+
+var currency = currencyCodes.code('USD')
+if (!currency) currency = { digits: 2 }
 
 var datefmt = 'yyyy-mm-dd HH:MM:ss'
 
@@ -130,7 +135,7 @@ exports.initialize = async function (debug, runtime) {
 exports.workers = {
 /* sent by GET /v1/reports/publishers
 
-    { queue            : 'report-publishers'
+    { queue            : 'report-publishers-contributions'
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
@@ -139,7 +144,7 @@ exports.workers = {
       }
     }
  */
-  'report-publishers':
+  'report-publishers-contributions':
     async function (debug, runtime, payload) {
       var data, fees, file, i, publishers, results, satoshis, usd
       var format = payload.format || 'csv'
@@ -170,8 +175,6 @@ exports.workers = {
         }
       }
 
-      file = await create(runtime, 'publishers-', payload)
-
       publishers = {}
       results = await quanta(debug, runtime)
       for (i = 0; i < results.length; i++) await slicer(results[i])
@@ -182,9 +185,11 @@ exports.workers = {
         results.push(underscore.extend({ publisher: publisher }, publishers[publisher]))
       })
       results = underscore.sortBy(results, 'publisher')
+
+      file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
-        return runtime.notify(debug, { text: 'report-publishers completed' })
+        return runtime.notify(debug, { text: 'report-publishers-contributions completed' })
       }
 
       usd = runtime.wallet.rates.USD
@@ -199,25 +204,148 @@ exports.workers = {
         data.push({ publisher: result.publisher,
                     total: result.satoshis,
                     fees: result.fees,
-                    'publisher USD': (result.satoshis * usd).toFixed(2),
-                    'processor USD': (result.fees * usd).toFixed(2)
+                    'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
+                    'processor USD': (result.fees * usd).toFixed(currency.digits)
                   })
         if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
       })
       data.push({ publisher: 'TOTAL',
                   total: satoshis,
                   fees: fees,
-                  'publisher USD': (satoshis * usd).toFixed(2),
-                  'processor USD': (fees * usd).toFixed(2)
+                  'publisher USD': (satoshis * usd).toFixed(currency.digits),
+                  'processor USD': (fees * usd).toFixed(currency.digits)
                 })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'report-publishers completed' })
+      runtime.notify(debug, { text: 'report-publishers-contributions completed' })
     },
 
-/* sent by GET /v1/reports/surveyors
+/* sent by GET /v1/reports/publishers/status
 
-    { queue            : 'report-surveyors'
+    { queue            : 'report-publishers-status'
+    , message          :
+      { reportId       : '...'
+      , reportURL      : '...'
+      , format         : 'json' | 'csv'
+      , summary        :  true  | false
+      }
+    }
+ */
+  'report-publishers-status':
+    async function (debug, runtime, payload) {
+      var data, entries, f, fields, file, i, keys, results, satoshis, summary, usd
+      var format = payload.format || 'csv'
+      var summaryP = payload.summary
+      var publishers = runtime.db.get('publishers', debug)
+      var tokens = runtime.db.get('tokens', debug)
+      var voting = runtime.db.get('voting', debug)
+
+      results = {}
+      entries = await tokens.find()
+      entries.forEach((entry) => {
+        var publisher
+
+        publisher = entry.publisher
+        if (!publisher) return
+
+        if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
+        if (entry.verified) {
+          underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId', 'reason' ]))
+        }
+        if (summaryP) return
+
+        if (!results[publisher].history) results[publisher].history = []
+        entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+        results[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'modified' ]))
+      })
+
+      summary = await voting.aggregate([
+        { $match:
+          { satoshis: { $gt: 0 },
+          exclude: false
+          }
+        },
+        { $group:
+          { _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
+        }
+      ])
+      satoshis = {}
+      summary.forEach(function (entry) { satoshis[entry._id] = entry.satoshis })
+      usd = runtime.wallet.rates.USD
+
+      f = async function (publisher) {
+        var datum, result
+
+        results[publisher].satoshis = satoshis[publisher] || 0
+        if (usd) results[publisher].USD = ((results[publisher].satoshis * usd) / 1e8).toFixed(currency.digits)
+
+        if (results[publisher].history) {
+          results[publisher].history = underscore.sortBy(results[publisher].history, 'modified')
+          if (!results[publisher].verified) results[publisher].reason = underscore.last(results[publisher].history).reason
+        }
+
+        datum = await publishers.findOne({ publisher: publisher })
+        if (!datum) return data.push(results[publisher])
+
+        datum.created = new Date(parseInt(datum._id.toHexString().substring(0, 8), 16) * 1000).getTime()
+        datum.modified = (datum.timestamp.high_ * 1000) + (datum.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+        underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp', 'verified' ]))
+
+        try {
+          result = await braveHapi.wreck.get(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher),
+                                            { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
+                                              useProxyP: true
+                                            })
+          if (Buffer.isBuffer(result)) result = JSON.parse(result)
+          datum = underscore.findWhere(result, function (entry) { return entry.verified })
+          if (datum) {
+            underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
+                              { phone: datum.phone_normalized })
+          }
+        } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
+
+        data.push(results[publisher])
+      }
+      data = []
+      keys = underscore.keys(results)
+      for (i = 0; i < keys.length; i++) await f(keys[i])
+      results = underscore.sortBy(data, 'publisher')
+
+      file = await create(runtime, 'publishers-', payload)
+      if (format !== 'csv') {
+        await file.write(JSON.stringify(data, null, 2), true)
+        return runtime.notify(debug, { text: 'report-publishers-status completed' })
+      }
+
+      data = []
+      results.forEach((result) => {
+        data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
+                                    { created: dateformat(result.created, datefmt),
+                                      modified: dateformat(result.modified, datefmt)
+                                    }))
+        if (!summaryP) {
+          result.history.forEach((entry) => {
+            data.push(underscore.extend({ publisher: result.publisher }, entry,
+                                        { modified: dateformat(entry.modified, datefmt) }))
+          })
+        }
+      })
+
+      fields = [ 'publisher', 'USD', 'satoshis',
+                 'verified', 'authorized', 'authority',
+                 'name', 'email', 'phone', 'address',
+                 'verificationId', 'reason',
+                 'created', 'modified',
+                 'legalFormURL' ]
+      await file.write(json2csv({ data: data, fields: fields }), true)
+      runtime.notify(debug, { text: 'report-publishers-status completed' })
+    },
+
+/* sent by GET /v1/reports/surveyors-contributions
+
+    { queue            : 'report-surveyors-contributions'
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
@@ -225,17 +353,17 @@ exports.workers = {
       }
     }
  */
-  'report-surveyors':
+  'report-surveyors-contributions':
     async function (debug, runtime, payload) {
       var data, file
       var format = payload.format || 'csv'
 
-      file = await create(runtime, 'surveyors-', payload)
-
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
+
+      file = await create(runtime, 'surveyors-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { text: 'report-publishers completed' })
+        return runtime.notify(debug, { text: 'report-surveyors-contributions completed' })
       }
 
       data.forEach((result) => {
@@ -244,7 +372,7 @@ exports.workers = {
       })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'report-surveyors completed' })
+      runtime.notify(debug, { text: 'report-surveyors-contributions completed' })
     }
 }
 
