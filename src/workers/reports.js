@@ -306,6 +306,15 @@ exports.workers = {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
                               { phone: datum.phone_normalized })
           }
+          if (!summaryP) {
+            results[publisher].history.forEach((entry) => {
+              datum = underscore.findWhere(result, function (entry2) { return entry.verificationId === entry2.verificationId })
+              if (datum) {
+                underscore.extend(results[publisher].history, underscore.pick(datum, [ 'name', 'email' ]),
+                                  { phone: datum.phone_normalized })
+              }
+            })
+          }
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
         if (elideP) {
