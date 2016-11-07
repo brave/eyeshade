@@ -276,7 +276,7 @@ v1.patchPublisher =
   validate:
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
       payload: {
-        authorized: Joi.boolean().optional().default(true).description('authorize the publisher'),
+        authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
         legalFormURL: braveJoi.string().uri().optional().description('S3 URL')
       }
     },
