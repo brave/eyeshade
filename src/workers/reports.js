@@ -301,6 +301,7 @@ exports.workers = {
                                               useProxyP: true
                                             })
           if (Buffer.isBuffer(result)) result = JSON.parse(result)
+if (publisher === 'ayumiyu.com')console.log(JSON.stringify(result, null, 2))
           datum = underscore.findWhere(result, function (entry) { return entry.verified })
           if (datum) {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
