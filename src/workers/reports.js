@@ -289,11 +289,11 @@ exports.workers = {
         }
 
         datum = await publishers.findOne({ publisher: publisher })
-        if (!datum) return data.push(results[publisher])
-
-        datum.created = new Date(parseInt(datum._id.toHexString().substring(0, 8), 16) * 1000).getTime()
-        datum.modified = (datum.timestamp.high_ * 1000) + (datum.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
-        underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp', 'verified' ]))
+        if (datum) {
+          datum.created = new Date(parseInt(datum._id.toHexString().substring(0, 8), 16) * 1000).getTime()
+          datum.modified = (datum.timestamp.high_ * 1000) + (datum.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+          underscore.extend(results[publisher], underscore.omit(datum, [ '_id', 'publisher', 'timestamp', 'verified' ]))
+        }
 
         try {
           result = await braveHapi.wreck.get(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher),
@@ -301,18 +301,22 @@ exports.workers = {
                                               useProxyP: true
                                             })
           if (Buffer.isBuffer(result)) result = JSON.parse(result)
-if (publisher === 'ayumiyu.com')console.log(JSON.stringify(result, null, 2))
-          datum = underscore.findWhere(result, function (entry) { return entry.verified })
+          datum = underscore.findWhere(result, function (entry) { return results[publisher].verificationId === entry.id })
           if (datum) {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
                               { phone: datum.phone_normalized })
           }
           if (!summaryP) {
-            results[publisher].history.forEach((entry) => {
-              datum = underscore.findWhere(result, function (entry2) { return entry.verificationId === entry2.verificationId })
+            results[publisher].history.forEach((record) => {
+              datum = underscore.findWhere(result, function (entry) { return record.verificationId === entry.id })
               if (datum) {
-                underscore.extend(results[publisher].history, underscore.pick(datum, [ 'name', 'email' ]),
-                                  { phone: datum.phone_normalized })
+                underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
+
+                if (elideP) {
+                  if (record.address) record.address = 'yes'
+                  if (record.email) record.email = 'yes'
+                  if (record.phone) record.phone = 'yes'
+                }
               }
             })
           }
@@ -345,9 +349,9 @@ if (publisher === 'ayumiyu.com')console.log(JSON.stringify(result, null, 2))
                                       modified: result.modified && dateformat(result.modified, datefmt)
                                     }))
         if (!summaryP) {
-          result.history.forEach((entry) => {
-            data.push(underscore.extend({ publisher: result.publisher }, entry,
-                                        { modified: dateformat(entry.modified, datefmt) }))
+          result.history.forEach((record) => {
+            data.push(underscore.extend({ publisher: result.publisher }, record,
+                                        { modified: dateformat(record.modified, datefmt) }))
           })
         }
       })
