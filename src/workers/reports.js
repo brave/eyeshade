@@ -189,7 +189,7 @@ exports.workers = {
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
-        return runtime.notify(debug, { text: 'report-publishers-contributions completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
       }
 
       usd = runtime.wallet.rates.USD
@@ -217,7 +217,7 @@ exports.workers = {
                 })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'report-publishers-contributions completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
     },
 
 /* sent by GET /v1/reports/publishers/status
@@ -339,7 +339,7 @@ exports.workers = {
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { text: 'report-publishers-status completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
       }
 
       data = []
@@ -363,7 +363,7 @@ exports.workers = {
                  'created', 'modified',
                  'legalFormURL' ]
       await file.write(json2csv({ data: data, fields: fields }), true)
-      runtime.notify(debug, { text: 'report-publishers-status completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
     },
 
 /* sent by GET /v1/reports/surveyors-contributions
@@ -386,7 +386,7 @@ exports.workers = {
       file = await create(runtime, 'surveyors-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { text: 'report-surveyors-contributions completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-surveyors-contributions completed' })
       }
 
       data.forEach((result) => {
@@ -395,7 +395,7 @@ exports.workers = {
       })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { text: 'report-surveyors-contributions completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-surveyors-contributions completed' })
     }
 }
 
