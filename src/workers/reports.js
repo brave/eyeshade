@@ -301,14 +301,14 @@ exports.workers = {
                                               useProxyP: true
                                             })
           if (Buffer.isBuffer(result)) result = JSON.parse(result)
-          datum = underscore.findWhere(result, function (entry) { return results[publisher].verificationId === entry.id })
+          datum = underscore.findWhere(result, { id: results[publisher].verificationId })
           if (datum) {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
                               { phone: datum.phone_normalized })
           }
           if (!summaryP) {
             results[publisher].history.forEach((record) => {
-              datum = underscore.findWhere(result, function (entry) { return record.verificationId === entry.id })
+              datum = underscore.findWhere(result, { id: record.verificationId })
               if (datum) {
                 underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
 
