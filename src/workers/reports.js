@@ -9,7 +9,7 @@ var underscore = require('underscore')
 var currency = currencyCodes.code('USD')
 if (!currency) currency = { digits: 2 }
 
-var datefmt = 'yyyy-mm-dd HH:MM:ss'
+var datefmt = 'yyyymmdd-HHMMss-l'
 
 var create = async function (runtime, prefix, params) {
   var extension, filename, options
@@ -131,6 +131,8 @@ exports.initialize = async function (debug, runtime) {
     setTimeout(function () { daily(debug, runtime) }, 5 * 1000)
   }
 }
+
+exports.create = create
 
 exports.workers = {
 /* sent by GET /v1/reports/publishers

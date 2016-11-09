@@ -1,4 +1,9 @@
 var bson = require('bson')
+var create = require('./reports.js').create
+var json2csv = require('json2csv')
+var underscore = require('underscore')
+var url = require('url')
+var uuid = require('node-uuid')
 
 var exports = {}
 
@@ -24,6 +29,8 @@ exports.initialize = async function (debug, runtime) {
   ])
 }
 
+var ninetyOneDays = 91 * 24 * 60 * 60 * 1000
+
 exports.workers = {
 /* sent by ledger PUT /v1/address/{personaId}/validate
 
@@ -31,9 +38,11 @@ exports.workers = {
     , message          :
       { paymentId      : '...'
       , address        : '...'
+      , satoshis       : 1403982
       , actor          : 'authorize.stripe'
       , transactionId  : '...'
-      , amount         : 5.00
+      , amount         : 10.25
+      , fee            : 0.25
       , currency       : 'USD'
       }
     }
@@ -41,12 +50,25 @@ exports.workers = {
   'population-report':
 
     async function (debug, runtime, payload) {
-/* TODO:
-   record address, amount, description
-   generate instructions for bitgo
- */
+      var file, reportURL, state
+      var now = underscore.now()
+      var reportId = uuid.v4().toLowerCase()
+      var transactionId = payload.transactionId
+      var populates = runtime.db.get('populates', debug)
 
-      debug('population-report', payload)
+      state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+                $set: underscore.extend(underscore.omit(payload, [ 'transactionId' ]),
+                                        { holdUntil: new Date(now + ninetyOneDays) })
+              }
+      await populates.update({ transactionId: transactionId }, state, { upsert: true })
+
+/* TODO: this is temporary utnil we decide how/if to safely automate */
+      file = await create(runtime, 'populates-', { format: 'csv', reportId: reportId })
+      underscore.extend(payload, { BTC: (payload.satoshis / 1e8).toFixed(8) })
+      await file.write(json2csv({ data: payload }), true)
+
+      reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      runtime.notify(debug, { channel: '#payments-bot', text: reportURL })
     }
 }
 
