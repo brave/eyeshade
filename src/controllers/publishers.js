@@ -312,7 +312,8 @@ var webResolver = async function (debug, runtime, publisher, path) {
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (8 * 1000) })
   } catch (ex) {
     debug('webResolver', ex)
-    if (ex.code !== 'ECONNREFUSED') throw ex
+    debug('webResolver ex.code=' + ex.code)
+    if ((ex.code !== 'ECONNREFUSED') || (ex.code !== 'ETIMEDOUT')) throw ex
   }
 
   return await braveHapi.wreck.get('http://' + publisher + path, { timeout: (8 * 1000) })
