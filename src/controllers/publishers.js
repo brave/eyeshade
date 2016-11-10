@@ -290,11 +290,8 @@ v1.patchPublisher =
  */
 
 var hints = {
-  standard: '/.well-known/brave-payments-verification.txt'
-
-/* not necessary, since even 404s will contain the header/trailing strings
-  squarespace: '/'
- */
+  standard: '/.well-known/brave-payments-verification.txt',
+  root: '/'
 }
 var hintsK = underscore.keys(hints)
 
@@ -309,13 +306,15 @@ var dnsTxtResolver = async function (domain) {
 
 var webResolver = async function (debug, runtime, publisher, path) {
   try {
-    return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (8 * 1000) })
+    return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
-    debug('webResolver', ex)
-    if ((ex.toString().indexOf('Client request timeout') === -1) && (ex.code !== 'ECONNREFUSED')) throw ex
+    if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
+      debug('webResolver', ex)
+      throw ex
+    }
   }
 
-  return await braveHapi.wreck.get('http://' + publisher + path, { timeout: (8 * 1000) })
+  return await braveHapi.wreck.get('http://' + publisher + path, { redirects: 3, timeout: (5 * 1000) })
 }
 
 var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
@@ -345,7 +344,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
                                          { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
                                        payload: JSON.stringify(payload)
                                      })
-    if (Buffer.isBuffer(result)) result = JSON.parse(result)
+    if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
     debug('patch', JSON.stringify(result, null, 2))
   } catch (ex) {
     debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
@@ -461,7 +460,7 @@ var notify = async function (debug, runtime, publisher, payload) {
                                         payload: JSON.stringify(payload),
                                         useProxyP: true
                                       })
-    if (Buffer.isBuffer(result)) result = JSON.parse(result)
+    if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
     debug('post', JSON.stringify(result, null, 2))
 
     message = underscore.extend({ publisher: publisher }, payload)
