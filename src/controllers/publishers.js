@@ -247,6 +247,7 @@ v1.patchPublisher =
     var publisher = request.params.publisher
     var payload = request.payload
     var authorized = payload.authorized
+    var legalFormURL = payload.legalFormURL
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
@@ -259,7 +260,14 @@ v1.patchPublisher =
             }
     await publishers.update({ publisher: publisher }, state, { upsert: true })
 
-    if (authorized) notify(debug, runtime, publisher, { type: 'payments_activated' })
+    if (authorized) await notify(debug, runtime, publisher, { type: 'payments_activated' })
+    if (legalFormURL.indexOf('void:') === 0) {
+      await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
+
+      // void:form_retry
+      if (entry.legalFormURL !== legalFormURL) await notify(debug, runtime, publisher, { type: legalFormURL.substr(5) })
+    }
+
     reply({})
   }
 },
@@ -277,7 +285,7 @@ v1.patchPublisher =
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
       payload: {
         authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
-        legalFormURL: braveJoi.string().uri().optional().description('S3 URL')
+        legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL')
       }
     },
 
@@ -318,7 +326,7 @@ var webResolver = async function (debug, runtime, publisher, path) {
 }
 
 var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
-  var message, payload, result, state
+  var message, payload, state
   var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
   var tokens = runtime.db.get('tokens', debug)
@@ -338,17 +346,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
 
   reason = reason || (verified ? 'ok' : 'unknown')
   payload = underscore.extend(underscore.pick(entry, [ 'verificationId', 'token', 'verified' ]), { status: reason })
-  try {
-    result = await braveHapi.wreck.patch(runtime.config.publishers.url + '/v1/publishers/' +
-                                         encodeURIComponent(entry.publisher) + '/verifications',
-                                         { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
-                                       payload: JSON.stringify(payload)
-                                     })
-    if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
-    debug('patch', JSON.stringify(result, null, 2))
-  } catch (ex) {
-    debug('publishers patch', underscore.extend(indices, { payload: payload, reason: ex.toString() }))
-  }
+  await publish(debug, runtime, 'patch', entry.publisher, '/verifications', payload)
   if (!verified) return
 
   await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: verified })
@@ -448,12 +446,12 @@ v1.verifyToken =
     }
 }
 
-var notify = async function (debug, runtime, publisher, payload) {
+var publish = async function (debug, runtime, method, publisher, endpoint, payload) {
   var message, result
 
   try {
-    result = await braveHapi.wreck.post(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
-                                        '/notifications',
+    result = await braveHapi.wreck[method](runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
+                                        endpoint,
                                       { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token,
                                                    'content-type': 'application/json'
                                                  },
@@ -461,12 +459,22 @@ var notify = async function (debug, runtime, publisher, payload) {
                                         useProxyP: true
                                       })
     if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
-    debug('post', JSON.stringify(result, null, 2))
+    debug('publishers', JSON.stringify(result, null, 2))
+  } catch (ex) {
+    debug('publishers', { method: method, publisher: publisher, endpoint: endpoint, reason: ex.toString() })
+  }
 
-    message = underscore.extend({ publisher: publisher }, payload)
-    debug('notify', message)
-    runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
-  } catch (ex) { debug('notify', { publisher: publisher, reason: ex.toString() }) }
+  return message
+}
+
+var notify = async function (debug, runtime, publisher, payload) {
+  var message = await publish(debug, runtime, 'post', publisher, '/notifications', payload)
+
+  if (!message) return
+
+  message = underscore.extend({ publisher: publisher }, payload)
+  debug('notify', message)
+  runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
 }
 
 module.exports.routes = [
