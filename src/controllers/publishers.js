@@ -251,6 +251,10 @@ v1.patchPublisher =
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
+    if ((legalFormURL.indexOf('void:') === 0) && (legalFormURL !== 'void:form_retry')) {
+      return reply(boom.badData('invalid legalFormURL: ' + legalFormURL))
+    }
+
     entry = await publishers.findOne({ publisher: publisher })
     if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
