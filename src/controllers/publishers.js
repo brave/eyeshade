@@ -269,7 +269,7 @@ v1.patchPublisher =
       await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
 
       // void:form_retry
-      if (entry.legalFormURL !== legalFormURL) await notify(debug, runtime, publisher, { type: legalFormURL.substr(5) })
+      await notify(debug, runtime, publisher, { type: legalFormURL.substr(5) })
     }
 
     reply({})
@@ -302,8 +302,10 @@ v1.patchPublisher =
  */
 
 var hints = {
-  standard: '/.well-known/brave-payments-verification.txt',
+  standard: '/.well-known/brave-payments-verification.txt'
+/*
   root: '/'
+ */
 }
 var hintsK = underscore.keys(hints)
 
