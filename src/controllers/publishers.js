@@ -465,7 +465,7 @@ var publish = async function (debug, runtime, method, publisher, endpoint, paylo
                                         useProxyP: true
                                       })
     if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
-    debug('publishers', JSON.stringify(result, null, 2))
+    debug('publishers', { method: method, publisher: publisher, endpoint: endpoint, reason: result })
   } catch (ex) {
     debug('publishers', { method: method, publisher: publisher, endpoint: endpoint, reason: ex.toString() })
   }
