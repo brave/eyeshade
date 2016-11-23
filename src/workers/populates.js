@@ -62,7 +62,7 @@ exports.workers = {
               }
       await populates.update({ transactionId: transactionId }, state, { upsert: true })
 
-/* TODO: this is temporary utnil we decide how/if to safely automate */
+/* TODO: this is temporary until we decide how/if to safely automate */
       file = await create(runtime, 'populates-', { format: 'csv', reportId: reportId })
       underscore.extend(payload, { BTC: (payload.satoshis / 1e8).toFixed(8) })
       await file.write(json2csv({ data: payload }), true)
