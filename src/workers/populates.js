@@ -3,7 +3,7 @@ var create = require('./reports.js').create
 var json2csv = require('json2csv')
 var underscore = require('underscore')
 var url = require('url')
-var uuid = require('node-uuid')
+var uuid = require('uuid')
 
 var exports = {}
 

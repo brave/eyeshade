@@ -4,7 +4,7 @@ var Joi = require('joi')
 var Readable = require('stream').Readable
 var underscore = require('underscore')
 var url = require('url')
-var uuid = require('node-uuid')
+var uuid = require('uuid')
 
 var v1 = {}
 

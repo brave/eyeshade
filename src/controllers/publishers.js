@@ -8,7 +8,7 @@ var dns = require('dns')
 var Joi = require('joi')
 var underscore = require('underscore')
 var url = require('url')
-var uuid = require('node-uuid')
+var uuid = require('uuid')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
