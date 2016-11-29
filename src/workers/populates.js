@@ -1,6 +1,5 @@
 var bson = require('bson')
 var create = require('./reports.js').create
-var json2csv = require('json2csv')
 var underscore = require('underscore')
 var url = require('url')
 var uuid = require('uuid')
@@ -48,7 +47,6 @@ exports.workers = {
     }
  */
   'population-report':
-
     async function (debug, runtime, payload) {
       var file, reportURL, state
       var now = underscore.now()
@@ -63,9 +61,9 @@ exports.workers = {
       await populates.update({ transactionId: transactionId }, state, { upsert: true })
 
 /* TODO: this is temporary until we decide how/if to safely automate */
-      file = await create(runtime, 'populates-', { format: 'csv', reportId: reportId })
+      file = await create(runtime, 'populates-', { format: 'json', reportId: reportId })
       underscore.extend(payload, { BTC: (payload.satoshis / 1e8).toFixed(8) })
-      await file.write(json2csv({ data: payload }), true)
+      await file.write(JSON.stringify([ payload ], null, 2), true)
 
       reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
       runtime.notify(debug, { channel: '#payments-bot', text: reportURL })
