@@ -26,27 +26,6 @@ exports.initialize = async function (debug, runtime) {
                 { holdUntil: 1 }, { timestamp: 1 } ]
     }
   ])
-
-// temporary
-  var contributions = runtime.db.get('contributions', debug)
-  var wallets = runtime.db.get('wallets', debug)
-  var entries = await contributions.find()
-
-  var entry, i, paymentId, viewingId
-  for (i = 0; i < entries.length; i++) {
-    var state, wallet
-
-    entry = entries[i]
-    viewingId = entry.viewingId
-    if (viewingId === '') continue
-
-    paymentId = entry.paymentId
-    wallet = await wallets.findOne({ paymentId: paymentId })
-    if (!wallet) return console.log('\n\nviewingId ' + viewingId + ' has unknown paymentId ' + paymentId)
-
-    state = { $set: { address: wallet.address } }
-    await contributions.update({ viewingId: viewingId }, state, { upsert: true, multi: true })
-  }
 }
 
 var ninetyOneDays = 91 * 24 * 60 * 60 * 1000
