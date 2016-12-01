@@ -135,7 +135,7 @@ exports.initialize = async function (debug, runtime) {
 exports.create = create
 
 exports.workers = {
-/* sent by GET /v1/reports/publishers
+/* sent by GET /v1/reports/publishers/contributions
 
     { queue            : 'report-publishers-contributions'
     , message          :
@@ -143,17 +143,21 @@ exports.workers = {
       , reportURL      : '...'
       , format         : 'json' | 'csv'
       , summary        :  true  | false
+      , authority      : '...:...'
       }
     }
  */
   'report-publishers-contributions':
     async function (debug, runtime, payload) {
       var data, fees, file, i, publishers, results, satoshis, usd
+      var authority = payload.authority
       var format = payload.format || 'csv'
+      var reportId = payload.reportId
       var summaryP = payload.summary
+      var publishersC = runtime.db.get('publishers', debug)
 
       var slicer = async function (quantum) {
-        var fees, i, satoshis, slice, state
+        var entry, fees, i, satoshis, slice, state
         var voting = runtime.db.get('voting', debug)
         var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
 
@@ -162,7 +166,18 @@ exports.workers = {
 
           satoshis = Math.floor(quantum.quantum * slice.counts * 0.95)
           fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
-          if (!publishers[slice.publisher]) publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
+          if (!publishers[slice.publisher]) {
+            publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
+
+            if (format !== 'csv') {
+              entry = await publishersC.findOne({ publisher: slice.publisher })
+              if (entry) {
+                underscore.extend(publishers[slice.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
+              } else {
+                publishers[slice.publisher].authorized = false
+              }
+            }
+          }
           publishers[slice.publisher].satoshis += satoshis
           publishers[slice.publisher].fees += fees
           publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
@@ -188,14 +203,34 @@ exports.workers = {
       })
       results = underscore.sortBy(results, 'publisher')
 
+      usd = runtime.wallet.rates.USD
+      usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
+
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
+        if (summaryP) {
+          publishers = []
+          results.forEach((entry) => {
+            var result
+
+            if (!entry.authorized) return
+
+            result = underscore.pick(entry, [ 'publisher', 'address', 'satoshis', 'fees' ])
+            result.authority = authority
+            result.transactionId = reportId
+            result.amount = (entry.satoshis * usd).toFixed(currency.digits)
+            result.fee = (entry.fees * usd).toFixed(currency.digits)
+            result.currency = 'USD'
+            publishers.push(result)
+          })
+
+          results = publishers
+        }
+
         await file.write(JSON.stringify(results, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
       }
 
-      usd = runtime.wallet.rates.USD
-      usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
       satoshis = 0
       fees = 0
 
@@ -204,7 +239,7 @@ exports.workers = {
         satoshis += result.satoshis
         fees += result.fees
         data.push({ publisher: result.publisher,
-                    total: result.satoshis,
+                    satoshis: result.satoshis,
                     fees: result.fees,
                     'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
                     'processor USD': (result.fees * usd).toFixed(currency.digits)
@@ -212,7 +247,7 @@ exports.workers = {
         if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
       })
       data.push({ publisher: 'TOTAL',
-                  total: satoshis,
+                  satoshis: satoshis,
                   fees: fees,
                   'publisher USD': (satoshis * usd).toFixed(currency.digits),
                   'processor USD': (fees * usd).toFixed(currency.digits)
@@ -220,6 +255,88 @@ exports.workers = {
 
       await file.write(json2csv({ data: data }), true)
       runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
+    },
+
+/* sent by GET /v1/reports/publishers/settlements
+
+    { queue            : 'report-publishers-settlements'
+    , message          :
+      { reportId       : '...'
+      , reportURL      : '...'
+      , format         : 'json' | 'csv'
+      , summary        :  true  | false
+      }
+    }
+ */
+  'report-publishers-settlements':
+    async function (debug, runtime, payload) {
+      var data, entries, fees, file, publishers, results, satoshis, usd
+      var format = payload.format || 'csv'
+      var summaryP = payload.summary
+      var settlements = runtime.db.get('settlements', debug)
+
+      publishers = {}
+      entries = await settlements.find()
+      entries.forEach((entry) => {
+        if (entry.publisher === '') return
+
+        if (!publishers[entry.publisher]) publishers[entry.publisher] = { satoshis: 0, fees: 0, txns: [] }
+
+        publishers[entry.publisher].satoshis += entry.satoshis
+        publishers[entry.publisher].fees += entry.fees
+        entry.created = new Date(parseInt(entry._id.toHexString().substring(0, 8), 16) * 1000).getTime()
+        entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+
+        publishers[entry.publisher].txns.push(underscore.pick(entry, [ 'satoshis', 'fees', 'settlementId', 'address',
+                                                                               'hash', 'created', 'modified' ]))
+      })
+
+      results = []
+      underscore.keys(publishers).forEach((publisher) => {
+        publishers[publisher].txns = underscore.sortBy(publishers[publisher].txns, 'created')
+        results.push(underscore.extend({ publisher: publisher }, publishers[publisher]))
+      })
+      results = underscore.sortBy(results, 'publisher')
+
+      file = await create(runtime, 'publishers-', payload)
+      if (format !== 'csv') {
+        await file.write(JSON.stringify(results, null, 2), true)
+        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-settlements completed' })
+      }
+
+      satoshis = 0
+      fees = 0
+      usd = runtime.wallet.rates.USD
+      usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
+
+      data = []
+      results.forEach((result) => {
+        satoshis += result.satoshis
+        fees += result.fees
+        data.push({ publisher: result.publisher,
+                    satoshis: result.satoshis,
+                    fees: result.fees,
+                    'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
+                    'processor USD': (result.fees * usd).toFixed(currency.digits)
+                  })
+        if (!summaryP) {
+          result.txns.forEach((txn) => {
+            data.push(underscore.extend({ publisher: result.publisher }, txn,
+                                        { created: txn.created && dateformat(txn.created, datefmt),
+                                          modified: txn.modified && dateformat(txn.modified, datefmt)
+                                        }))
+          })
+        }
+      })
+      data.push({ publisher: 'TOTAL',
+                  satoshis: satoshis,
+                  fees: fees,
+                  'publisher USD': (satoshis * usd).toFixed(currency.digits),
+                  'processor USD': (fees * usd).toFixed(currency.digits)
+                })
+
+      await file.write(json2csv({ data: data }), true)
+      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-settlements completed' })
     },
 
 /* sent by GET /v1/reports/publishers/status
@@ -241,6 +358,7 @@ exports.workers = {
       var elideP = payload.elide
       var summaryP = payload.summary
       var publishers = runtime.db.get('publishers', debug)
+      var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
       var voting = runtime.db.get('voting', debug)
 
@@ -277,6 +395,19 @@ exports.workers = {
       ])
       satoshis = {}
       summary.forEach(function (entry) { satoshis[entry._id] = entry.satoshis })
+      summary = await settlements.aggregate([
+        { $match:
+          { satoshis: { $gt: 0 } }
+        },
+        { $group:
+          { _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
+        }
+      ])
+      summary.forEach(function (entry) {
+        if (typeof satoshis[entry._id] !== 'undefined') satoshis[entry._id] -= entry.satoshis
+      })
       usd = runtime.wallet.rates.USD
 
       f = async function (publisher) {

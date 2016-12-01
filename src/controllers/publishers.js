@@ -46,6 +46,57 @@ v1.prune =
 }
 
 /*
+   POST /v1/publishers/settlement/{hash}
+ */
+
+v1.settlement =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var entry, i, state
+    var hash = request.params.hash
+    var payload = request.payload
+    var debug = braveHapi.debug(module, request)
+    var settlements = runtime.db.get('settlements', debug)
+
+    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+              $set: { hash: hash }
+            }
+    for (i = 0; i < payload.length; i++) {
+      entry = payload[i]
+
+      underscore.extend(state.$set, underscore.pick(entry, [ 'address', 'satoshis', 'fees' ]))
+      await settlements.update({ settlementId: entry.transactionId, publisher: entry.publisher }, state, { upsert: true })
+    }
+
+    reply({})
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Posts a settlement for one or more publishers',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { hash: Joi.string().hex().required().description('transaction hash') },
+      payload: Joi.array().min(1).items(Joi.object()
+               .keys({
+                 publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+                 address: braveJoi.string().base58().required().description('BTC address'),
+                 satoshis: Joi.number().integer().min(1).required().description('the settlement in satoshis'),
+                 transactionId: Joi.string().guid().description('the transactionId')
+               }).unknown(true)).required().description('publisher settlement report')
+    },
+
+  response:
+    { schema: Joi.object().keys().unknown(true) }
+}
+
+/*
    GET /v1/publishers/{publisher}/balance
  */
 
@@ -56,6 +107,7 @@ v1.getBalance =
     var publisher = request.params.publisher
     var currency = request.query.currency
     var debug = braveHapi.debug(module, request)
+    var settlements = runtime.db.get('settlements', debug)
     var voting = runtime.db.get('voting', debug)
 
     summary = await voting.aggregate([
@@ -72,6 +124,20 @@ v1.getBalance =
       }
     ])
     satoshis = summary.length > 0 ? summary[0].satoshis : 0
+
+    summary = await settlements.aggregate([
+      { $match:
+        { satoshis: { $gt: 0 },
+          publisher: { $eq: publisher }
+        }
+      },
+      { $group:
+        { _id: '$publisher',
+          satoshis: { $sum: '$satoshis' }
+        }
+      }
+    ])
+    if (summary.length > 0) satoshis -= summary[0].satoshis
 
     rate = runtime.wallet.rates[currency.toUpperCase()]
     if (rate) {
@@ -485,6 +551,7 @@ var notify = async function (debug, runtime, publisher, payload) {
 
 module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
+  braveHapi.routes.async().post().path('/v1/publishers/settlement/{hash}').config(v1.settlement),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
@@ -510,6 +577,13 @@ module.exports.initialize = async function (debug, runtime) {
              },
       unique: [ { publisher: 1 } ],
       others: [ { verified: 1 }, { address: 0 }, { legalFormURL: 0 }, { authorized: 1 }, { authority: 1 }, { timestamp: 1 } ]
+    },
+    { category: runtime.db.get('settlements', debug),
+      name: 'settlements',
+      property: 'settlementId_0_publisher',
+      empty: { settlementId: '', publisher: '', hash: '', address: '', satoshis: 0, fees: 0, timestamp: bson.Timestamp.ZERO },
+      unique: [ { settlementId: 0, publisher: 1 }, { hash: 0, publisher: 1 } ],
+      others: [ { address: 0 }, { satoshis: 1 }, { fees: 1 }, { timestamp: 1 } ]
     },
     { category: runtime.db.get('tokens', debug),
       name: 'tokens',
