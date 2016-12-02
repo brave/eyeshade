@@ -407,7 +407,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   debug('verified', message)
   if (/* (!backgroundP) || */ (verified)) {
     runtime.notify(debug,
-                   { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified ' + JSON.stringify(message) })
+                   { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified: ' + JSON.stringify(message) })
   }
 
   entry.verified = verified
@@ -546,7 +546,7 @@ var notify = async function (debug, runtime, publisher, payload) {
 
   message = underscore.extend({ publisher: publisher }, payload)
   debug('notify', message)
-  runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notification: ' + JSON.stringify(message) })
+  runtime.notify(debug, { channel: '#publishers-bot', text: 'publishers notified: ' + JSON.stringify(message) })
 }
 
 module.exports.routes = [
