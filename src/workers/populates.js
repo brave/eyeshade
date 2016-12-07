@@ -1,4 +1,3 @@
-var bson = require('bson')
 var create = require('./reports.js').create
 var underscore = require('underscore')
 var url = require('url')
@@ -7,28 +6,8 @@ var uuid = require('uuid')
 var exports = {}
 
 exports.initialize = async function (debug, runtime) {
-  runtime.db.checkIndices(debug,
-  [ { category: runtime.db.get('populates', debug),
-      name: 'populates',
-      property: 'transactionId',
-      empty: { transactionId: '',
-               paymentId: '',
-               address: '',
-               actor: '',
-               amount: '',
-               currency: '',
-               satoshis: 0,
-               holdUntil: bson.Timestamp.ZERO,
-               timestamp: bson.Timestamp.ZERO
-             },
-      unique: [ { transactionId: 0 } ],
-      others: [ { paymentId: 0 }, { address: 0 }, { actor: 1 }, { amount: 1 }, { currency: 1 }, { satoshis: 1 },
-                { holdUntil: 1 }, { timestamp: 1 } ]
-    }
-  ])
+  await runtime.queue.create('population-report')
 }
-
-var ninetyOneDays = 91 * 24 * 60 * 60 * 1000
 
 exports.workers = {
 /* sent by ledger PUT /v1/address/{personaId}/validate
@@ -48,17 +27,8 @@ exports.workers = {
  */
   'population-report':
     async function (debug, runtime, payload) {
-      var file, reportURL, state
-      var now = underscore.now()
+      var file, reportURL
       var reportId = uuid.v4().toLowerCase()
-      var transactionId = payload.transactionId
-      var populates = runtime.db.get('populates', debug)
-
-      state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-                $set: underscore.extend(underscore.omit(payload, [ 'transactionId' ]),
-                                        { holdUntil: new Date(now + ninetyOneDays) })
-              }
-      await populates.update({ transactionId: transactionId }, state, { upsert: true })
 
 /* TODO: this is temporary until we decide how/if to safely automate */
       file = await create(runtime, 'populates-', { format: 'json', reportId: reportId })
