@@ -31,6 +31,9 @@ v1.populates =
       underscore.extend(state.$set, underscore.pick(entry, [ 'address', 'satoshis' ]))
       await populates.update({ transactionId: entry.transactionId }, state, { upsert: true })
 
+      entry.subject = 'Bitcoin on its way!'
+      entry.trackingURL = 'https://blockchain.info/tx/' + hash
+
       notify(debug, runtime, entry.address, 'purchase_completed', underscore.omit(entry, [ 'address' ]))
     }
 
