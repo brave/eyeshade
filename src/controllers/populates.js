@@ -65,7 +65,7 @@ var notify = async function (debug, runtime, address, type, payload) {
   var result
 
   try {
-    result = await braveHapi.wreck.post(runtime.config.payments.url + '/v1/notifications' + encodeURIComponent(address) +
+    result = await braveHapi.wreck.post(runtime.config.payments.url + '/v1/notifications/' + encodeURIComponent(address) +
                                         '?type=' + type,
                                         { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token,
                                                      'content-type': 'application/json'
