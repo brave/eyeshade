@@ -139,7 +139,7 @@ v1.publishers.status =
 
   auth:
     { strategy: 'session',
-      scope: [ 'ledger' ],
+      scope: [ 'ledger', 'QA' ],
       mode: 'required'
     },
 

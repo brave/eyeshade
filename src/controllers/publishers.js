@@ -344,7 +344,7 @@ v1.patchPublisher =
 
   auth:
     { strategy: 'session',
-      scope: [ 'devops' ],
+      scope: [ 'ledger' ],
       mode: 'required'
     },
 
