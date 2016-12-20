@@ -346,7 +346,6 @@ exports.workers = {
       { reportId       : '...'
       , reportURL      : '...'
       , format         : 'json' | 'csv'
-      , duration       :  true  | false
       , elide          :  true  | false
       , summary        :  true  | false
       }
@@ -356,15 +355,12 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, entries, f, fields, file, i, keys, results, satoshis, summary, usd
       var format = payload.format || 'csv'
-      var durationP = payload.duration
       var elideP = payload.elide
       var summaryP = payload.summary
       var publishers = runtime.db.get('publishers', debug)
       var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
       var voting = runtime.db.get('voting', debug)
-
-      var temporal = (timestamp) => { return (durationP ? moment(timestamp).fromNow() : dateformat(timestamp, datefmt)) }
 
       results = {}
       entries = await tokens.find()
@@ -482,7 +478,10 @@ exports.workers = {
           underscore.extend(result, underscore.pick(underscore.last(result.history), [ 'created', 'modified' ]))
         }
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-                                    { created: temporal(result.created), modified: temporal(result.modified) }))
+                                    { created: dateformat(result.created, datefmt),
+                                      modified: dateformat(result.modified, datefmt),
+                                      queuetime: moment(result.created).fromNow()
+                                    }))
         if (!summaryP) {
           result.history.forEach((record) => {
             if (elideP) {
@@ -492,7 +491,10 @@ exports.workers = {
               if (record.verificationId) record.verificationId = 'yes'
             }
             data.push(underscore.extend({ publisher: result.publisher }, record,
-                                        { created: temporal(record.created), modified: temporal(record.modified) }))
+                                        { created: dateformat(record.created, datefmt),
+                                          modified: dateformat(record.modified, datefmt),
+                                          queuetime: moment(record.created).fromNow()
+                                        }))
           })
         }
       })
@@ -501,7 +503,7 @@ exports.workers = {
                  'verified', 'authorized', 'authority',
                  'name', 'email', 'phone', 'address',
                  'verificationId', 'reason',
-                 'created', 'modified',
+                 'queuetime', 'created', 'modified',
                  'legalFormURL' ]
       await file.write(json2csv({ data: data, fields: fields }), true)
       runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
