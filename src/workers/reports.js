@@ -374,11 +374,12 @@ exports.workers = {
         if (entry.verified) {
           underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId', 'reason' ]))
         }
-        if (summaryP) return
 
         if (!results[publisher].history) results[publisher].history = []
+        entry.created = new Date(parseInt(entry._id.toHexString().substring(0, 8), 16) * 1000).getTime()
         entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
-        results[publisher].history.push(underscore.pick(entry, [ 'verificationId', 'verified', 'reason', 'modified' ]))
+        results[publisher].history.push(underscore.pick(entry,
+                                                        [ 'verificationId', 'verified', 'reason', 'created', 'modified' ]))
       })
 
       summary = await voting.aggregate([
@@ -417,7 +418,9 @@ exports.workers = {
         if (usd) results[publisher].USD = ((results[publisher].satoshis * usd) / 1e8).toFixed(currency.digits)
 
         if (results[publisher].history) {
-          results[publisher].history = underscore.sortBy(results[publisher].history, 'modified')
+          results[publisher].history = underscore.sortBy(results[publisher].history, (record) => {
+            return (record.verified ? Number.POSITIVE_INFINITY : record.modified)
+          })
           if (!results[publisher].verified) results[publisher].reason = underscore.last(results[publisher].history).reason
         }
 
@@ -439,26 +442,20 @@ exports.workers = {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
                               { phone: datum.phone_normalized })
           }
-          if (!summaryP) {
-            results[publisher].history.forEach((record) => {
-              datum = underscore.findWhere(result, { id: record.verificationId })
-              if (datum) {
-                underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
 
-                if (elideP) {
-                  if (record.address) record.address = 'yes'
-                  if (record.email) record.email = 'yes'
-                  if (record.phone) record.phone = 'yes'
-                }
-              }
-            })
-          }
+          results[publisher].history.forEach((record) => {
+            datum = underscore.findWhere(result, { id: record.verificationId })
+            if (datum) {
+              underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
+            }
+          })
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
         if (elideP) {
-          if (results[publisher].address) results[publisher].address = 'yes'
           if (results[publisher].email) results[publisher].email = 'yes'
           if (results[publisher].phone) results[publisher].phone = 'yes'
+          if (results[publisher].address) results[publisher].address = 'yes'
+          if (results[publisher].verificationId) results[publisher].verificationId = 'yes'
           if (results[publisher].legalFormURL) results[publisher].legalFormURL = 'yes'
         }
 
@@ -477,14 +474,25 @@ exports.workers = {
 
       data = []
       results.forEach((result) => {
+        if (!result.created) {
+          underscore.extend(result, underscore.pick(underscore.last(result.history), [ 'created', 'modified' ]))
+        }
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-                                    { created: result.created && dateformat(result.created, datefmt),
-                                      modified: result.modified && dateformat(result.modified, datefmt)
+                                    { created: dateformat(result.created, datefmt),
+                                      modified: dateformat(result.modified, datefmt)
                                     }))
         if (!summaryP) {
           result.history.forEach((record) => {
+            if (elideP) {
+              if (record.email) record.email = 'yes'
+              if (record.phone) record.phone = 'yes'
+              if (record.address) record.address = 'yes'
+              if (record.verificationId) record.verificationId = 'yes'
+            }
             data.push(underscore.extend({ publisher: result.publisher }, record,
-                                        { modified: dateformat(record.modified, datefmt) }))
+                                        { created: dateformat(record.created, datefmt),
+                                          modified: dateformat(record.modified, datefmt)
+                                        }))
           })
         }
       })
