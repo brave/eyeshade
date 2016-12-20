@@ -346,6 +346,7 @@ exports.workers = {
       { reportId       : '...'
       , reportURL      : '...'
       , format         : 'json' | 'csv'
+      , duration       :  true  | false
       , elide          :  true  | false
       , summary        :  true  | false
       }
@@ -355,12 +356,15 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, entries, f, fields, file, i, keys, results, satoshis, summary, usd
       var format = payload.format || 'csv'
+      var durationP = payload.duration
       var elideP = payload.elide
       var summaryP = payload.summary
       var publishers = runtime.db.get('publishers', debug)
       var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
       var voting = runtime.db.get('voting', debug)
+
+      var temporal = (timestamp) => { return (durationP ? moment(timestamp).fromNow() : dateformat(timestamp, datefmt)) }
 
       results = {}
       entries = await tokens.find()
@@ -447,7 +451,7 @@ exports.workers = {
             datum = underscore.findWhere(result, { id: record.verificationId })
             if (datum) {
               underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
-            }
+            } else console.log(publisher + ' / ' + record.verificationId + ': miss')
           })
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
@@ -478,9 +482,7 @@ exports.workers = {
           underscore.extend(result, underscore.pick(underscore.last(result.history), [ 'created', 'modified' ]))
         }
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-                                    { created: dateformat(result.created, datefmt),
-                                      modified: dateformat(result.modified, datefmt)
-                                    }))
+                                    { created: temporal(result.created), modified: temporal(result.modified) }))
         if (!summaryP) {
           result.history.forEach((record) => {
             if (elideP) {
@@ -490,9 +492,7 @@ exports.workers = {
               if (record.verificationId) record.verificationId = 'yes'
             }
             data.push(underscore.extend({ publisher: result.publisher }, record,
-                                        { created: dateformat(record.created, datefmt),
-                                          modified: dateformat(record.modified, datefmt)
-                                        }))
+                                        { created: temporal(record.created), modified: temporal(record.modified) }))
           })
         }
       })
