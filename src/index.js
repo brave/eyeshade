@@ -1,3 +1,4 @@
+// process.on('warning', warning => console.warn(warning.stack))
 process.env.NEW_RELIC_NO_CONFIG_FILE = true
 if (process.env.NEW_RELIC_APP_NAME && process.env.NEW_RELIC_LICENSE_KEY) { var newrelic = require('newrelic') }
 if (!newrelic) {

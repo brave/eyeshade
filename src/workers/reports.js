@@ -353,7 +353,7 @@ exports.workers = {
  */
   'report-publishers-status':
     async function (debug, runtime, payload) {
-      var data, entries, f, fields, file, i, keys, results, satoshis, summary, usd
+      var data, entries, f, fields, file, i, keys, now, results, satoshis, summary, usd
       var format = payload.format || 'csv'
       var elideP = payload.elide
       var summaryP = payload.summary
@@ -362,6 +362,11 @@ exports.workers = {
       var tokens = runtime.db.get('tokens', debug)
       var voting = runtime.db.get('voting', debug)
 
+      var daysago = (timestamp) => {
+        return Math.round((now - timestamp) / (86400 * 1000))
+      }
+
+      now = underscore.now()
       results = {}
       entries = await tokens.find()
       entries.forEach((entry) => {
@@ -412,7 +417,7 @@ exports.workers = {
       usd = runtime.wallet.rates.USD
 
       f = async function (publisher) {
-        var datum, result
+        var datum, datum2, result
 
         results[publisher].satoshis = satoshis[publisher] || 0
         if (usd) results[publisher].USD = ((results[publisher].satoshis * usd) / 1e8).toFixed(currency.digits)
@@ -444,11 +449,15 @@ exports.workers = {
           }
 
           results[publisher].history.forEach((record) => {
-            datum = underscore.findWhere(result, { id: record.verificationId })
-            if (datum) {
-              underscore.extend(record, underscore.pick(datum, [ 'name', 'email' ]), { phone: datum.phone_normalized })
-            } else console.log(publisher + ' / ' + record.verificationId + ': miss')
+            datum2 = underscore.findWhere(result, { id: record.verificationId })
+            if (datum2) {
+              underscore.extend(record, underscore.pick(datum2, [ 'name', 'email' ]), { phone: datum2.phone_normalized })
+            }
           })
+          if ((!datum) && (datum2)) {
+            underscore.extend(results[publisher], underscore.pick(datum2, [ 'name', 'email' ]),
+                              { phone: datum2.phone_normalized })
+          }
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
         if (elideP) {
@@ -480,7 +489,7 @@ exports.workers = {
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
                                     { created: dateformat(result.created, datefmt),
                                       modified: dateformat(result.modified, datefmt),
-                                      queuetime: moment(result.created).fromNow()
+                                      daysInQueue: daysago(result.created)
                                     }))
         if (!summaryP) {
           result.history.forEach((record) => {
@@ -493,7 +502,7 @@ exports.workers = {
             data.push(underscore.extend({ publisher: result.publisher }, record,
                                         { created: dateformat(record.created, datefmt),
                                           modified: dateformat(record.modified, datefmt),
-                                          queuetime: moment(record.created).fromNow()
+                                          daysInQueue: daysago(record.created)
                                         }))
           })
         }
@@ -503,7 +512,7 @@ exports.workers = {
                  'verified', 'authorized', 'authority',
                  'name', 'email', 'phone', 'address',
                  'verificationId', 'reason',
-                 'queuetime', 'created', 'modified',
+                 'daysInQueue', 'created', 'modified',
                  'legalFormURL' ]
       await file.write(json2csv({ data: data, fields: fields }), true)
       runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
