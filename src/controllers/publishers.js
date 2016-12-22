@@ -370,13 +370,17 @@ v1.patchPublisher =
 v1.deletePublisher =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var entry
+    var entries
     var publisher = request.params.publisher
     var debug = braveHapi.debug(module, request)
     var tokens = runtime.db.get('tokens', debug)
 
-    entry = await tokens.findOne({ verified: true, publisher: publisher })
-    if (entry) return reply(boom.data('publisher is already verified: ' + publisher))
+    entries = await tokens.find({ publisher: publisher })
+    if (entries.length === 0) return reply(boom.notFound('no such entry: ' + publisher))
+
+    if (underscore.findWhere(entries, { verified: true })) {
+      return reply(boom.data('publisher is already verified: ' + publisher))
+    }
 
     await tokens.remove({ publisher: publisher })
 
