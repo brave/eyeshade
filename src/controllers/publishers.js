@@ -409,10 +409,8 @@ v1.deletePublisher =
  */
 
 var hints = {
-  standard: '/.well-known/brave-payments-verification.txt'
-/*
+  standard: '/.well-known/brave-payments-verification.txt',
   root: '/'
- */
 }
 var hintsK = underscore.keys(hints)
 
@@ -472,7 +470,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
 v1.verifyToken =
 { handler: function (runtime) {
   return async function (request, reply) {
-    var data, entry, entries, hint, i, info, j, matchP, reason, rr, rrset
+    var data, entry, entries, hint, i, info, j, matchP, pattern, reason, rr, rrset
     var publisher = request.params.publisher
     var backgroundP = request.query.backgroundP
     var debug = braveHapi.debug(module, request)
@@ -537,6 +535,17 @@ v1.verifyToken =
         }
 
         if (data[hint].indexOf(entry.token) !== -1) {
+          switch (hint) {
+            case root:
+              pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
+                        '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
+              debug('test ' + pattern)
+              if (!data[hint].match(pattern)) continue
+              break
+
+            default:
+              break
+          }
           return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
         }
       }
