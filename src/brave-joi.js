@@ -25,7 +25,6 @@ module.exports = Joi.extend({
 
       validate (params, value, state, options) {
         try { base58check.decode(value) } catch (err) {
-console.log(err.toString() + '\n' + err.stack)
           return this.createError('string.badBase58', { v: value }, state, options)
         }
 

@@ -411,8 +411,11 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   }
 
   entry.verified = verified
+  if (reason.indexOf('Error: ') === 0) reason = reason.substr(7)
+  if (reason.indexOf('Client request error: ') === 0) reason = reason.substr(22)
+  if (reason.indexOf('Hostname/IP doesn\'t match certificate\'s altnames: ') === 0) reason = reason.substr(0, 48)
   state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: { verified: entry.verified, reason: reason }
+            $set: { verified: entry.verified, reason: reason.substr(0, 64) }
           }
   await tokens.update(indices, state, { upsert: true })
 
