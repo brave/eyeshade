@@ -425,6 +425,7 @@ var dnsTxtResolver = async function (domain) {
 
 var webResolver = async function (debug, runtime, publisher, path) {
   try {
+debug('WR resolve https://' + publisher + path)
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
@@ -526,20 +527,23 @@ v1.verifyToken =
 
       for (j = 0; j < hintsK.length; j++) {
         hint = hintsK[j]
+debug('WR looking for ' + hint)
         if (typeof data[hint] === 'undefined') {
           try { data[hint] = (await webResolver(debug, runtime, publisher, hints[hint])).toString() } catch (ex) {
             data[hint] = ''
+debug('WR nothing for ' + hint)
             await loser(ex.toString())
             continue
           }
         }
 
+debug('WR testing ' + hint)
         if (data[hint].indexOf(entry.token) !== -1) {
           switch (hint) {
             case root:
               pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
                         '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
-              debug('test ' + pattern)
+debug('WR test ' + pattern)
               if (!data[hint].match(pattern)) continue
               break
 
