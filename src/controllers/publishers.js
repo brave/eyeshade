@@ -364,6 +364,43 @@ v1.patchPublisher =
 }
 
 /*
+   DELETE /v1/publishers/{publisher}
+ */
+
+v1.deletePublisher =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var entry
+    var publisher = request.params.publisher
+    var debug = braveHapi.debug(module, request)
+    var tokens = runtime.db.get('tokens', debug)
+
+    entry = await tokens.findOne({ verified: true, publisher: publisher })
+    if (entry) return reply(boom.data('publisher is already verified: ' + publisher))
+
+    await tokens.remove({ publisher: publisher })
+
+    reply({})
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Deletes a non-verified publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') } },
+
+  response:
+    { schema: Joi.object().length(0) }
+}
+
+/*
    GET /v1/publishers/{publisher}/verify
  */
 
@@ -560,7 +597,8 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').whitelist().config(v1.setWallet),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken),
-  braveHapi.routes.async().patch().path('/v1/publishers/{publisher}').whitelist().config(v1.patchPublisher)
+  braveHapi.routes.async().patch().path('/v1/publishers/{publisher}').whitelist().config(v1.patchPublisher),
+  braveHapi.routes.async().delete().path('/v1/publishers/{publisher}').whitelist().config(v1.deletePublisher)
 ]
 
 module.exports.initialize = async function (debug, runtime) {
