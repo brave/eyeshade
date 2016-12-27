@@ -36,7 +36,7 @@ exports.workers = {
       await file.write(JSON.stringify([ payload ], null, 2), true)
 
       reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-      runtime.notify(debug, { channel: '#payments-bot', text: reportURL })
+      runtime.notify(debug, { channel: '#funding-bot', text: reportURL })
     }
 }
 

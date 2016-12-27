@@ -68,9 +68,9 @@ var notify = async function (debug, runtime, address, type, payload) {
   var result
 
   try {
-    result = await braveHapi.wreck.post(runtime.config.payments.url + '/v1/notifications/' + encodeURIComponent(address) +
+    result = await braveHapi.wreck.post(runtime.config.funding.url + '/v1/notifications/' + encodeURIComponent(address) +
                                         '?type=' + type,
-                                        { headers: { authorization: 'Bearer ' + runtime.config.payments.access_token,
+                                        { headers: { authorization: 'Bearer ' + runtime.config.funding.access_token,
                                                      'content-type': 'application/json'
                                                    },
                                           payload: JSON.stringify(payload),
@@ -86,7 +86,7 @@ var notify = async function (debug, runtime, address, type, payload) {
 
   result = underscore.extend({ address: address }, payload)
   debug('notify', result)
-  runtime.notify(debug, { channel: '#payments-bot', text: 'consumer notified: ' + JSON.stringify(result) })
+  runtime.notify(debug, { channel: '#funding-bot', text: 'consumer notified: ' + JSON.stringify(result) })
 }
 
 module.exports.routes = [

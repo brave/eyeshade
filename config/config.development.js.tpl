@@ -15,9 +15,9 @@ module.exports =
     , secretKey         : process.env.BITCOIN_AVERAGE_SECRET_KEY
     }
   }
-, payments              :
-  { url                 : process.env.PAYMENTS_URL
-  , access_token        : process.env.PAYMENTS_TOKEN
+, funding               :
+  { url                 : process.env.FUNDING_URL
+  , access_token        : process.env.FUNDING_TOKEN
   }
 , publishers            :
   { url                 : process.env.PUBLISHERS_URL
