@@ -20,11 +20,13 @@ var prefix = 'brave-ledger-verification='
 v1.prune =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
     var reportId = uuid.v4().toLowerCase()
     var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
     var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'prune-publishers', { reportId: reportId, reportURL: reportURL })
+    await runtime.queue.send(debug, 'prune-publishers',
+                             { reportId: reportId, reportURL: reportURL, authority: authority })
     reply({ reportURL: reportURL })
   }
 },
@@ -425,7 +427,6 @@ var dnsTxtResolver = async function (domain) {
 
 var webResolver = async function (debug, runtime, publisher, path) {
   try {
-debug('WR resolve https://' + publisher + path)
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
@@ -527,23 +528,19 @@ v1.verifyToken =
 
       for (j = 0; j < hintsK.length; j++) {
         hint = hintsK[j]
-debug('WR looking for ' + hint)
         if (typeof data[hint] === 'undefined') {
           try { data[hint] = (await webResolver(debug, runtime, publisher, hints[hint])).toString() } catch (ex) {
             data[hint] = ''
-debug('WR nothing for ' + hint)
             await loser(ex.toString())
             continue
           }
         }
 
-debug('WR testing ' + hint)
         if (data[hint].indexOf(entry.token) !== -1) {
           switch (hint) {
             case root:
               pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
                         '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
-debug('WR test ' + pattern)
               if (!data[hint].match(pattern)) continue
               break
 

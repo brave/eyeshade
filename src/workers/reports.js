@@ -141,9 +141,9 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
+      , authority      : '...:...'
       , format         : 'json' | 'csv'
       , summary        :  true  | false
-      , authority      : '...:...'
       }
     }
  */
@@ -228,7 +228,8 @@ exports.workers = {
         }
 
         await file.write(JSON.stringify(results, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot',
+                                       text: authority + ' report-publishers-contributions completed' })
       }
 
       satoshis = 0
@@ -254,7 +255,7 @@ exports.workers = {
                 })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-contributions completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-contributions completed' })
     },
 
 /* sent by GET /v1/reports/publishers/settlements
@@ -263,6 +264,7 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
+      , authority      : '...:...'
       , format         : 'json' | 'csv'
       , summary        :  true  | false
       }
@@ -271,6 +273,7 @@ exports.workers = {
   'report-publishers-settlements':
     async function (debug, runtime, payload) {
       var data, entries, fees, file, publishers, results, satoshis, usd
+      var authority = payload.authority
       var format = payload.format || 'csv'
       var summaryP = payload.summary
       var settlements = runtime.db.get('settlements', debug)
@@ -301,7 +304,8 @@ exports.workers = {
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-settlements completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot',
+                                       text: authority + ' report-publishers-settlements completed' })
       }
 
       satoshis = 0
@@ -336,7 +340,7 @@ exports.workers = {
                 })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-settlements completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-settlements completed' })
     },
 
 /* sent by GET /v1/reports/publishers/status
@@ -345,6 +349,7 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
+      , authority      : '...:...'
       , format         : 'json' | 'csv'
       , elide          :  true  | false
       , summary        :  true  | false
@@ -354,6 +359,7 @@ exports.workers = {
   'report-publishers-status':
     async function (debug, runtime, payload) {
       var data, entries, f, fields, file, i, keys, now, results, satoshis, summary, usd
+      var authority = payload.authority
       var format = payload.format || 'csv'
       var elideP = payload.elide
       var summaryP = payload.summary
@@ -478,7 +484,8 @@ exports.workers = {
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot',
+                                       text: authority + ' report-publishers-status completed' })
       }
 
       data = []
@@ -515,7 +522,7 @@ exports.workers = {
                  'daysInQueue', 'created', 'modified',
                  'legalFormURL' ]
       await file.write(json2csv({ data: data, fields: fields }), true)
-      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-publishers-status completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-status completed' })
     },
 
 /* sent by GET /v1/reports/surveyors-contributions
@@ -524,6 +531,7 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
+      , authority      : '...:...'
       , format         : 'json' | 'csv'
       }
     }
@@ -531,6 +539,7 @@ exports.workers = {
   'report-surveyors-contributions':
     async function (debug, runtime, payload) {
       var data, file
+      var authority = payload.authority
       var format = payload.format || 'csv'
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
@@ -538,7 +547,8 @@ exports.workers = {
       file = await create(runtime, 'surveyors-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot', text: 'report-surveyors-contributions completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot',
+                                       text: authority + ' report-surveyors-contributions completed' })
       }
 
       data.forEach((result) => {
@@ -547,7 +557,7 @@ exports.workers = {
       })
 
       await file.write(json2csv({ data: data }), true)
-      runtime.notify(debug, { channel: '#publishers-bot', text: 'report-surveyors-contributions completed' })
+      runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-surveyors-contributions completed' })
     }
 }
 

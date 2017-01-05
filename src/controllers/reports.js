@@ -93,12 +93,14 @@ v1.publishers.contributions =
 v1.publishers.settlements =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
     var reportId = uuid.v4().toLowerCase()
     var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
     var debug = braveHapi.debug(module, request)
 
     await runtime.queue.send(debug, 'report-publishers-settlements',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL }, request.query))
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.query))
     reply({ reportURL: reportURL })
   }
 },
@@ -127,12 +129,14 @@ v1.publishers.settlements =
 v1.publishers.status =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
     var reportId = uuid.v4().toLowerCase()
     var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
     var debug = braveHapi.debug(module, request)
 
     await runtime.queue.send(debug, 'report-publishers-status',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL }, request.query))
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.query))
     reply({ reportURL: reportURL })
   }
 },
@@ -167,12 +171,14 @@ v1.surveyors = {}
 v1.surveyors.contributions =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
     var reportId = uuid.v4().toLowerCase()
     var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
     var debug = braveHapi.debug(module, request)
 
     await runtime.queue.send(debug, 'report-surveyors-contributions',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL }, request.query))
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.query))
     reply({ reportURL: reportURL })
   }
 },
