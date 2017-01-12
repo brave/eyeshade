@@ -29,25 +29,31 @@ exports.workers = {
 
       votes = await voting.aggregate([
           { $match: { counts: { $gt: 0 },
-                      exclude: !reset
+                      exclude: reset
                     }
           },
           { $group: { _id: '$publisher' } },
           { $project: { _id: 1 } }
       ])
+      state = { $currentDate: { timestamp: { $type: 'timestamp' } },
+                $set: { exclude: !reset }
+              }
 
       results = []
       if ((reset) && (test)) {
-        votes.forEach(function (entry) { results.push(entry._id) })
+        votes.forEach(async function (entry) {
+          var publisher = entry._id
+          var result
+
+          results.push(publisher)
+          if (!test) await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
+
+        })
 
         await file.write(JSON.stringify(results, null, 2), true)
         runtime.notify(debug, { channel: '#publishers-bot',
                                 text: authority + ' prune-publishers completed, count: ' + results.length })
       }
-
-      state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-                $set: { exclude: true }
-              }
 
       votes.forEach(async function (entry) {
         var publisher = entry._id

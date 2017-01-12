@@ -42,7 +42,7 @@ v1.prune =
   tags: [ 'api' ],
 
   validate:
-    { query: { reset: Joi.boolean().optional().default(true).description('reset excluded publishers'),
+    { query: { reset: Joi.boolean().optional().default(false).description('reset excluded publishers'),
                test: Joi.boolean().optional().default(true).description('test actions')
               } },
 
