@@ -26,7 +26,8 @@ v1.prune =
     var debug = braveHapi.debug(module, request)
 
     await runtime.queue.send(debug, 'prune-publishers',
-                             { reportId: reportId, reportURL: reportURL, authority: authority })
+                             underscore.extend(request.query,
+                                               { reportId: reportId, reportURL: reportURL, authority: authority }))
     reply({ reportURL: reportURL })
   }
 },
@@ -41,7 +42,9 @@ v1.prune =
   tags: [ 'api' ],
 
   validate:
-    { query: {} },
+    { query: { reset: Joi.boolean().optional().default(true).description('reset excluded publishers'),
+               test: Joi.boolean().optional().default(true).description('test actions')
+              } },
 
   response:
     { schema: Joi.object().keys().unknown(true) }

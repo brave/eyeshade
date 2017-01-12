@@ -11,6 +11,8 @@ exports.workers = {
       { reportId       : '...'
       , reportURL      : '...'
       , authority      : '...:...'
+      , reset          : true | false
+      , test           : true | false
       }
     }
  */
@@ -19,24 +21,34 @@ exports.workers = {
       var file, results, state, votes
       var authority = payload.authority
       var reportId = payload.reportId
+      var reset = payload.reset
+      var test = payload.test
       var voting = runtime.db.get('voting', debug)
 
       file = await runtime.db.file(reportId, 'w', { content_type: 'application/json' })
 
       votes = await voting.aggregate([
           { $match: { counts: { $gt: 0 },
-                      exclude: false
+                      exclude: !reset
                     }
           },
           { $group: { _id: '$publisher' } },
           { $project: { _id: 1 } }
       ])
 
+      results = []
+      if ((reset) && (test)) {
+        votes.forEach(function (entry) { results.push(entry._id) })
+
+        await file.write(JSON.stringify(results, null, 2), true)
+        runtime.notify(debug, { channel: '#publishers-bot',
+                                text: authority + ' prune-publishers completed, count: ' + results.length })
+      }
+
       state = { $currentDate: { timestamp: { $type: 'timestamp' } },
                 $set: { exclude: true }
               }
 
-      results = []
       votes.forEach(async function (entry) {
         var publisher = entry._id
         var result
@@ -49,7 +61,7 @@ exports.workers = {
         }
 
         results.push(publisher)
-        await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
+        if (!test) await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
       })
 
       await file.write(JSON.stringify(results, null, 2), true)
