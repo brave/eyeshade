@@ -40,7 +40,7 @@ exports.workers = {
               }
 
       results = []
-      if ((reset) && (test)) {
+      if (reset) {
         votes.forEach(async function (entry) {
           var publisher = entry._id
           var result
