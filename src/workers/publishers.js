@@ -64,7 +64,7 @@ exports.workers = {
           if (!test) await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
         })
 
-        await file.write(JSON.stringify(results, null, 2), true)
+        await file.write(JSON.stringify(results.sort(domainCompare), null, 2), true)
         runtime.notify(debug, { channel: '#publishers-bot',
                                 text: authority + ' prune-publishers completed, count: ' + results.length })
         return
