@@ -3,6 +3,18 @@ var underscore = require('underscore')
 
 var exports = {}
 
+var domainSort = function (domains) {
+  var result = []
+
+  domains.forEach(function (domain) { result.push(domain.split('.').reverse()) })
+  result.sort()
+
+  domains = []
+  result.forEach(function (domain) { domains.push(domain.reverse().join('.')) })
+
+  return domains
+}
+
 exports.workers = {
 /* sent by POST /v1/publishers/prune
 
@@ -69,7 +81,7 @@ exports.workers = {
         if (!test) await voting.update({ publisher: publisher }, state, { upsert: false, multi: true })
       })
 
-      await file.write(JSON.stringify(results, null, 2), true)
+      await file.write(JSON.stringify(domainSort(results), null, 2), true)
       runtime.notify(debug, { channel: '#publishers-bot',
                               text: authority + ' prune-publishers completed, count: ' + results.length })
     }
