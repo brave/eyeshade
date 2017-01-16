@@ -14,7 +14,7 @@ var domainCompare = function (a, b) {
       return (b.length === 0 ? 0 : (-1))
     } else if (b.length === 0) return 1
 
-    d = a.shift() - b.shift()
+    d = a.shift().localeCompare(b.shift())
     if (d !== 0) return (d < 0 ? (-1) : 1)
   }
 }
