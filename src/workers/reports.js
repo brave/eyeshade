@@ -9,7 +9,8 @@ var underscore = require('underscore')
 var currency = currencyCodes.code('USD')
 if (!currency) currency = { digits: 2 }
 
-var datefmt = 'yyyymmdd-HHMMss-l'
+var datefmt = 'yyyymmdd-HHMMss'
+var datefmt2 = 'yyyymmdd-HHMMss-l'
 
 var create = async function (runtime, prefix, params) {
   var extension, filename, options
@@ -21,7 +22,7 @@ var create = async function (runtime, prefix, params) {
     options = { content_type: 'text/csv' }
     extension = '.csv'
   }
-  filename = prefix + dateformat(underscore.now(), datefmt) + extension
+  filename = prefix + dateformat(underscore.now(), datefmt2) + extension
   options.metadata = { 'content-disposition': 'attachment; filename="' + filename + '"' }
   return await runtime.db.file(params.reportId, 'w', options)
 }
@@ -135,7 +136,8 @@ exports.initialize = async function (debug, runtime) {
 exports.create = create
 
 exports.workers = {
-/* sent by GET /v1/reports/publishers/contributions
+/* sent by GET /v1/reports/publisher/{publisher}/contributions
+           GET /v1/reports/publishers/contributions
 
     { queue            : 'report-publishers-contributions'
     , message          :
@@ -143,6 +145,7 @@ exports.workers = {
       , reportURL      : '...'
       , authority      : '...:...'
       , format         : 'json' | 'csv'
+      , publisher      : '...'
       , summary        :  true  | false
       }
     }
@@ -152,6 +155,7 @@ exports.workers = {
       var data, fees, file, i, publishers, results, satoshis, usd
       var authority = payload.authority
       var format = payload.format || 'csv'
+      var publisher = payload.publisher
       var reportId = payload.reportId
       var summaryP = payload.summary
       var publishersC = runtime.db.get('publishers', debug)
@@ -166,6 +170,8 @@ exports.workers = {
 
           satoshis = Math.floor(quantum.quantum * slice.counts * 0.95)
           fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
+          if ((publisher) && (slice.publisher !== publisher)) continue
+
           if (!publishers[slice.publisher]) {
             publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
 
@@ -181,6 +187,8 @@ exports.workers = {
           publishers[slice.publisher].satoshis += satoshis
           publishers[slice.publisher].fees += fees
           publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
+                                                   lastUpdated: (slice.timestamp.high_ * 1000) +
+                                                                  (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
                                                    counts: slice.counts,
                                                    satoshis: satoshis,
                                                    fees: fees
@@ -245,20 +253,29 @@ exports.workers = {
                     'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
                     'processor USD': (result.fees * usd).toFixed(currency.digits)
                   })
-        if (!summaryP) result.votes.forEach((vote) => { data.push(underscore.extend({ publisher: result.publisher }, vote)) })
+        if (!summaryP) {
+          underscore.sortBy(result.votes, 'lastUpdated').forEach((vote) => {
+            data.push(underscore.extend({ publisher: result.publisher },
+                                        underscore.omit(vote, [ 'updated' ]),
+                                        { lastUpdated: dateformat(vote.lastUpdated, datefmt) }))
+          })
+        }
       })
-      data.push({ publisher: 'TOTAL',
-                  satoshis: satoshis,
-                  fees: fees,
-                  'publisher USD': (satoshis * usd).toFixed(currency.digits),
-                  'processor USD': (fees * usd).toFixed(currency.digits)
-                })
+      if (!publisher) {
+        data.push({ publisher: 'TOTAL',
+                    satoshis: satoshis,
+                    fees: fees,
+                    'publisher USD': (satoshis * usd).toFixed(currency.digits),
+                    'processor USD': (fees * usd).toFixed(currency.digits)
+                  })
+      }
 
       await file.write(json2csv({ data: data }), true)
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-contributions completed' })
     },
 
-/* sent by GET /v1/reports/publishers/settlements
+/* sent by GET /v1/reports/publisher/{publisher}/settlements
+           GET /v1/reports/publishers/settlements
 
     { queue            : 'report-publishers-settlements'
     , message          :
@@ -266,6 +283,7 @@ exports.workers = {
       , reportURL      : '...'
       , authority      : '...:...'
       , format         : 'json' | 'csv'
+      , publisher      : '...'
       , summary        :  true  | false
       }
     }
@@ -275,11 +293,12 @@ exports.workers = {
       var data, entries, fees, file, publishers, results, satoshis, usd
       var authority = payload.authority
       var format = payload.format || 'csv'
+      var publisher = payload.publisher
       var summaryP = payload.summary
       var settlements = runtime.db.get('settlements', debug)
 
       publishers = {}
-      entries = await settlements.find()
+      entries = publisher ? (await settlements.find({ publisher: publisher })) : (await settlements.find())
       entries.forEach((entry) => {
         if (entry.publisher === '') return
 
@@ -332,12 +351,14 @@ exports.workers = {
           })
         }
       })
-      data.push({ publisher: 'TOTAL',
-                  satoshis: satoshis,
-                  fees: fees,
-                  'publisher USD': (satoshis * usd).toFixed(currency.digits),
-                  'processor USD': (fees * usd).toFixed(currency.digits)
+      if (!publisher) {
+        data.push({ publisher: 'TOTAL',
+                    satoshis: satoshis,
+                    fees: fees,
+                    'publisher USD': (satoshis * usd).toFixed(currency.digits),
+                    'processor USD': (fees * usd).toFixed(currency.digits)
                 })
+      }
 
       await file.write(json2csv({ data: data }), true)
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-settlements completed' })

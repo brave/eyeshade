@@ -1,5 +1,6 @@
 var boom = require('boom')
 var braveHapi = require('../brave-hapi')
+var braveJoi = require('../brave-joi')
 var Joi = require('joi')
 var Readable = require('stream').Readable
 var underscore = require('underscore')
@@ -48,11 +49,46 @@ v1.getFile =
     { params: { reportId: Joi.string().guid().required().description('the report identifier') } }
 }
 
+v1.publisher = {}
 v1.publishers = {}
 
 /*
+   GET /v1/reports/publisher/{publisher}/contributions
    GET /v1/reports/publishers/contributions
  */
+
+v1.publisher.contributions =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+    var reportId = uuid.v4().toLowerCase()
+    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+    var debug = braveHapi.debug(module, request)
+
+    await runtime.queue.send(debug, 'report-publishers-contributions',
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.params, request.query))
+    reply({ reportURL: reportURL })
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Returns information about contributions to a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
+                         'the format of the report'
+                       ),
+               summary: Joi.boolean().optional().default(true).description('summarize report')
+              } }
+}
 
 v1.publishers.contributions =
 { handler: function (runtime) {
@@ -87,8 +123,42 @@ v1.publishers.contributions =
 }
 
 /*
+   GET /v1/reports/publisher/{publisher}/settlements
    GET /v1/reports/publishers/settlements
  */
+
+v1.publisher.settlements =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+    var reportId = uuid.v4().toLowerCase()
+    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+    var debug = braveHapi.debug(module, request)
+
+    await runtime.queue.send(debug, 'report-publishers-settlements',
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.params, request.query))
+    reply({ reportURL: reportURL })
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Returns information about settlements to a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
+                         'the format of the report'
+                       ),
+               summary: Joi.boolean().optional().default(true).description('summarize report')
+              } }
+}
 
 v1.publishers.settlements =
 { handler: function (runtime) {
@@ -204,7 +274,9 @@ v1.surveyors.contributions =
 
 module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/file/{reportId}').config(v1.getFile),
+  braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/contributions').config(v1.publisher.contributions),
   braveHapi.routes.async().path('/v1/reports/publishers/contributions').config(v1.publishers.contributions),
+  braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/settlements').config(v1.publisher.settlements),
   braveHapi.routes.async().path('/v1/reports/publishers/settlements').config(v1.publishers.settlements),
   braveHapi.routes.async().path('/v1/reports/publishers/status').config(v1.publishers.status),
   braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
