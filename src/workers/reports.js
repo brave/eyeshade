@@ -270,7 +270,10 @@ exports.workers = {
                   })
       }
 
-      await file.write(json2csv({ data: data }), true)
+      try { await file.write(json2csv({ data: data }), true) } catch (ex) {
+        debug('reports', { report: 'report-publishers-contributions', reason: ex.toString() })
+        file.close()
+      }
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-contributions completed' })
     },
 
@@ -360,7 +363,10 @@ exports.workers = {
                 })
       }
 
-      await file.write(json2csv({ data: data }), true)
+      try { await file.write(json2csv({ data: data }), true) } catch (ex) {
+        debug('reports', { report: 'report-publishers-settlements', reason: ex.toString() })
+        file.close()
+      }
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-settlements completed' })
     },
 
@@ -542,7 +548,10 @@ exports.workers = {
                  'verificationId', 'reason',
                  'daysInQueue', 'created', 'modified',
                  'legalFormURL' ]
-      await file.write(json2csv({ data: data, fields: fields }), true)
+      try { await file.write(json2csv({ data: data, fields: fields }), true) } catch (ex) {
+        debug('reports', { report: 'report-publishers-status', reason: ex.toString() })
+        file.close()
+      }
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-status completed' })
     },
 
@@ -577,7 +586,10 @@ exports.workers = {
                           { created: dateformat(result.created, datefmt), modified: dateformat(result.modified, datefmt) })
       })
 
-      await file.write(json2csv({ data: data }), true)
+      try { await file.write(json2csv({ data: data }), true) } catch (ex) {
+        debug('reports', { report: 'report-surveyors-contributions', reason: ex.toString() })
+        file.close()
+      }
       runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-surveyors-contributions completed' })
     }
 }
