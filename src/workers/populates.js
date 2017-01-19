@@ -31,7 +31,7 @@ exports.workers = {
       var reportId = uuid.v4().toLowerCase()
 
 /* TODO: this is temporary until we decide how/if to safely automate */
-      file = await create(runtime, 'populates-', { format: 'json', reportId: reportId })
+      file = await create(runtime, 'population-', { format: 'json', reportId: reportId })
       underscore.extend(payload, { BTC: (payload.satoshis / 1e8).toFixed(8) })
       await file.write(JSON.stringify([ payload ], null, 2), true)
 

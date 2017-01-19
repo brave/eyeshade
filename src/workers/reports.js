@@ -214,7 +214,7 @@ exports.workers = {
       usd = runtime.wallet.rates.USD
       usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
 
-      file = await create(runtime, 'publishers-', payload)
+      file = await create(runtime, 'publishers-contributions', payload)
       if (format !== 'csv') {
         if (summaryP) {
           publishers = []
@@ -323,7 +323,7 @@ exports.workers = {
       })
       results = underscore.sortBy(results, 'publisher')
 
-      file = await create(runtime, 'publishers-', payload)
+      file = await create(runtime, 'publishers-settlements', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
@@ -508,7 +508,7 @@ exports.workers = {
       for (i = 0; i < keys.length; i++) await f(keys[i])
       results = underscore.sortBy(data, 'publisher')
 
-      file = await create(runtime, 'publishers-', payload)
+      file = await create(runtime, 'publishers-status', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
@@ -574,7 +574,7 @@ exports.workers = {
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
 
-      file = await create(runtime, 'surveyors-', payload)
+      file = await create(runtime, 'surveyors-contributions', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
