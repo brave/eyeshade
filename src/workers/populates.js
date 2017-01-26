@@ -6,7 +6,7 @@ var uuid = require('uuid')
 var exports = {}
 
 exports.initialize = async function (debug, runtime) {
-  await runtime.queue.create('population-report')
+  await runtime.queue.create('population-report-')
 }
 
 exports.workers = {

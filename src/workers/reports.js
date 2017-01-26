@@ -48,6 +48,22 @@ var daily = async function (debug, runtime) {
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
 }
 
+var hourly = async function (debug, runtime) {
+  var next
+  var now = underscore.now()
+
+  debug('hourly', 'running')
+
+  try {
+    await mixer(debug, runtime, undefined, 'csv')
+  } catch (ex) {
+    debug('hourly', ex)
+  }
+  next = now + 60 * 60 * 1000
+  setTimeout(function () { hourly(debug, runtime) }, next - now)
+  debug('hourly', 'running again ' + moment(next).fromNow())
+}
+
 var quanta = async function (debug, runtime) {
   var i, results, votes
   var contributions = runtime.db.get('contributions', debug)
@@ -125,11 +141,62 @@ var quanta = async function (debug, runtime) {
   }))
 }
 
+var mixer = async function (debug, runtime, publisher, format) {
+  var i, results
+  var publishers = {}
+  var publishersC = runtime.db.get('publishers', debug)
+
+  var slicer = async function (quantum) {
+    var entry, fees, i, satoshis, slice, state
+    var voting = runtime.db.get('voting', debug)
+    var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
+
+    for (i = 0; i < slices.length; i++) {
+      slice = slices[i]
+
+      satoshis = Math.floor(quantum.quantum * slice.counts * 0.95)
+      fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
+      if ((publisher) && (slice.publisher !== publisher)) continue
+
+      if (!publishers[slice.publisher]) {
+        publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
+
+        if (format !== 'csv') {
+          entry = await publishersC.findOne({ publisher: slice.publisher })
+          if (entry) {
+            underscore.extend(publishers[slice.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
+          } else {
+            publishers[slice.publisher].authorized = false
+          }
+        }
+      }
+      publishers[slice.publisher].satoshis += satoshis
+      publishers[slice.publisher].fees += fees
+      publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
+                                               lastUpdated: (slice.timestamp.high_ * 1000) +
+                                                              (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
+                                               counts: slice.counts,
+                                               satoshis: satoshis,
+                                               fees: fees
+                                             })
+      if (slice.satoshis === satoshis) continue
+
+      state = { $set: { satoshis: satoshis } }
+      await voting.update({ surveyorId: quantum.surveyorId, publisher: slice.publisher }, state, { upsert: true })
+    }
+  }
+
+  results = await quanta(debug, runtime)
+  for (i = 0; i < results.length; i++) await slicer(results[i])
+  return publishers
+}
+
 var exports = {}
 
 exports.initialize = async function (debug, runtime) {
   if ((typeof process.env.DYNO === 'undefined') || (process.env.DYNO === 'worker.1')) {
     setTimeout(function () { daily(debug, runtime) }, 5 * 1000)
+    setTimeout(function () { hourly(debug, runtime) }, 30 * 1000)
   }
 }
 
@@ -152,57 +219,31 @@ exports.workers = {
  */
   'report-publishers-contributions':
     async function (debug, runtime, payload) {
-      var data, fees, file, i, publishers, results, satoshis, usd
+      var data, fees, file, previous, publishers, results, satoshis, usd
       var authority = payload.authority
       var format = payload.format || 'csv'
       var publisher = payload.publisher
       var reportId = payload.reportId
       var summaryP = payload.summary
-      var publishersC = runtime.db.get('publishers', debug)
+      var settlements = runtime.db.get('settlements', debug)
 
-      var slicer = async function (quantum) {
-        var entry, fees, i, satoshis, slice, state
-        var voting = runtime.db.get('voting', debug)
-        var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
+      publishers = await mixer(debug, runtime, publisher, format)
 
-        for (i = 0; i < slices.length; i++) {
-          slice = slices[i]
-
-          satoshis = Math.floor(quantum.quantum * slice.counts * 0.95)
-          fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
-          if ((publisher) && (slice.publisher !== publisher)) continue
-
-          if (!publishers[slice.publisher]) {
-            publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
-
-            if (format !== 'csv') {
-              entry = await publishersC.findOne({ publisher: slice.publisher })
-              if (entry) {
-                underscore.extend(publishers[slice.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
-              } else {
-                publishers[slice.publisher].authorized = false
-              }
-            }
+      previous = await settlements.aggregate([
+        { $match:
+          { satoshis: { $gt: 0 } }
+        },
+        { $group:
+          { _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
           }
-          publishers[slice.publisher].satoshis += satoshis
-          publishers[slice.publisher].fees += fees
-          publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
-                                                   lastUpdated: (slice.timestamp.high_ * 1000) +
-                                                                  (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
-                                                   counts: slice.counts,
-                                                   satoshis: satoshis,
-                                                   fees: fees
-                                                 })
-          if (slice.satoshis === satoshis) continue
-
-          state = { $set: { satoshis: satoshis } }
-          await voting.update({ surveyorId: quantum.surveyorId, publisher: slice.publisher }, state, { upsert: true })
         }
-      }
-
-      publishers = {}
-      results = await quanta(debug, runtime)
-      for (i = 0; i < results.length; i++) await slicer(results[i])
+      ])
+      previous.forEach(function (entry) {
+        if (typeof publishers[entry._id] !== 'undefined') publishers[entry._id].satoshis -= entry.satoshis
+      })
+      usd = runtime.wallet.rates.USD
+      usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
 
       results = []
       underscore.keys(publishers).forEach((publisher) => {
@@ -211,17 +252,14 @@ exports.workers = {
       })
       results = underscore.sortBy(results, 'publisher')
 
-      usd = runtime.wallet.rates.USD
-      usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
-
-      file = await create(runtime, 'publishers-contributions', payload)
+      file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
         if (summaryP) {
           publishers = []
           results.forEach((entry) => {
             var result
 
-            if (!entry.authorized) return
+            if ((!entry.authorized) || (entry.satoshis <= 0)) return
 
             result = underscore.pick(entry, [ 'publisher', 'address', 'satoshis', 'fees' ])
             result.authority = authority
@@ -323,7 +361,7 @@ exports.workers = {
       })
       results = underscore.sortBy(results, 'publisher')
 
-      file = await create(runtime, 'publishers-settlements', payload)
+      file = await create(runtime, 'publishers-settlements-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(results, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
@@ -508,7 +546,7 @@ exports.workers = {
       for (i = 0; i < keys.length; i++) await f(keys[i])
       results = underscore.sortBy(data, 'publisher')
 
-      file = await create(runtime, 'publishers-status', payload)
+      file = await create(runtime, 'publishers-status-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
@@ -574,7 +612,7 @@ exports.workers = {
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
 
-      file = await create(runtime, 'surveyors-contributions', payload)
+      file = await create(runtime, 'surveyors-contributions-', payload)
       if (format !== 'csv') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',

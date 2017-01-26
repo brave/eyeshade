@@ -143,6 +143,7 @@ v1.getBalance =
       }
     ])
     if (summary.length > 0) satoshis -= summary[0].satoshis
+    if (satoshis < 0) satoshis = 0
 
     rate = runtime.wallet.rates[currency.toUpperCase()]
     if (rate) {
