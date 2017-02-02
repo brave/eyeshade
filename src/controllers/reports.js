@@ -93,13 +93,20 @@ v1.publisher.contributions =
 v1.publishers.contributions =
 { handler: function (runtime) {
   return async function (request, reply) {
+    var amount = request.query.amount
     var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+    var currency = request.query.currency
+    var rate = runtime.wallet.rates[currency.toUpperCase()]
     var reportId = uuid.v4().toLowerCase()
     var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+    var threshold = 0
     var debug = braveHapi.debug(module, request)
+
+    if ((amount) && (rate)) threshold = Math.floor((amount / rate) * 1e8)
 
     await runtime.queue.send(debug, 'report-publishers-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 { threshold: threshold },
                                                  request.query))
     reply({ reportURL: reportURL })
   }
@@ -118,7 +125,10 @@ v1.publishers.contributions =
     { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
                          'the format of the report'
                        ),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
+               summary: Joi.boolean().optional().default(true).description('summarize report'),
+               authorized: Joi.boolean().optional().description('filter on authorization'),
+               amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
+               currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency')
               } }
 }
 

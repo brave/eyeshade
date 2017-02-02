@@ -55,7 +55,7 @@ var hourly = async function (debug, runtime) {
   debug('hourly', 'running')
 
   try {
-    await mixer(debug, runtime, undefined, 'csv')
+    await mixer(debug, runtime, undefined, false)
   } catch (ex) {
     debug('hourly', ex)
   }
@@ -141,7 +141,7 @@ var quanta = async function (debug, runtime) {
   }))
 }
 
-var mixer = async function (debug, runtime, publisher, format) {
+var mixer = async function (debug, runtime, publisher, reportP) {
   var i, results
   var publishers = {}
   var publishersC = runtime.db.get('publishers', debug)
@@ -161,7 +161,7 @@ var mixer = async function (debug, runtime, publisher, format) {
       if (!publishers[slice.publisher]) {
         publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
 
-        if (format !== 'csv') {
+        if (reportP) {
           entry = await publishersC.findOne({ publisher: slice.publisher })
           if (entry) {
             underscore.extend(publishers[slice.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
@@ -191,6 +191,10 @@ var mixer = async function (debug, runtime, publisher, format) {
   return publishers
 }
 
+var publisherCompare = function (a, b) {
+  return braveHapi.domainCompare(a.publisher, b.publisher)
+}
+
 var exports = {}
 
 exports.initialize = async function (debug, runtime) {
@@ -210,10 +214,12 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
+      , authorized     :  true  | false
       , authority      : '...:...'
       , format         : 'json' | 'csv'
       , publisher      : '...'
       , summary        :  true  | false
+      , threshold      : satoshis
       }
     }
  */
@@ -221,13 +227,15 @@ exports.workers = {
     async function (debug, runtime, payload) {
       var data, fees, file, previous, publishers, results, satoshis, usd
       var authority = payload.authority
+      var authorized = payload.authorized
       var format = payload.format || 'csv'
       var publisher = payload.publisher
       var reportId = payload.reportId
       var summaryP = payload.summary
+      var threshold = payload.threshold || 0
       var settlements = runtime.db.get('settlements', debug)
 
-      publishers = await mixer(debug, runtime, publisher, format)
+      publishers = await mixer(debug, runtime, publisher, (format !== 'csv') || (typeof authorized === 'boolean'))
 
       previous = await settlements.aggregate([
         { $match:
@@ -247,10 +255,14 @@ exports.workers = {
 
       results = []
       underscore.keys(publishers).forEach((publisher) => {
+        if (publishers[publisher].satoshis <= threshold) return
+
+        if ((typeof authorized === 'boolean') && (publishers[publisher].authorized !== authorized)) return
+
         publishers[publisher].votes = underscore.sortBy(publishers[publisher].votes, 'surveyorId')
         results.push(underscore.extend({ publisher: publisher }, publishers[publisher]))
       })
-      results = underscore.sortBy(results, 'publisher')
+      results = results.sort(publisherCompare)
 
       file = await create(runtime, 'publishers-', payload)
       if (format !== 'csv') {
@@ -259,7 +271,7 @@ exports.workers = {
           results.forEach((entry) => {
             var result
 
-            if ((!entry.authorized) || (entry.satoshis <= 0)) return
+            if (!entry.authorized) return
 
             result = underscore.pick(entry, [ 'publisher', 'address', 'satoshis', 'fees' ])
             result.authority = authority
@@ -359,7 +371,7 @@ exports.workers = {
         publishers[publisher].txns = underscore.sortBy(publishers[publisher].txns, 'created')
         results.push(underscore.extend({ publisher: publisher }, publishers[publisher]))
       })
-      results = underscore.sortBy(results, 'publisher')
+      results = results.sort(publisherCompare)
 
       file = await create(runtime, 'publishers-settlements-', payload)
       if (format !== 'csv') {
@@ -544,7 +556,7 @@ exports.workers = {
       data = []
       keys = underscore.keys(results)
       for (i = 0; i < keys.length; i++) await f(keys[i])
-      results = underscore.sortBy(data, 'publisher')
+      results = data.sort(publisherCompare)
 
       file = await create(runtime, 'publishers-status-', payload)
       if (format !== 'csv') {
