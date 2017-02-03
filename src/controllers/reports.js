@@ -203,6 +203,73 @@ v1.publishers.settlements =
 }
 
 /*
+   GET /v1/reports/publisher/{publisher}/statements
+   GET /v1/reports/publishers/statements/{hash}
+ */
+
+v1.publisher.statements =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+    var reportId = uuid.v4().toLowerCase()
+    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+    var debug = braveHapi.debug(module, request)
+
+    await runtime.queue.send(debug, 'report-publishers-statements',
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 request.params, request.query))
+    reply({ reportURL: reportURL })
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Returns statements for a publisher',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+      query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
+    }
+}
+
+v1.publishers.statements =
+{ handler: function (runtime) {
+  return async function (request, reply) {
+    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+    var hash = request.params.hash
+    var reportId = uuid.v4().toLowerCase()
+    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+    var debug = braveHapi.debug(module, request)
+
+    await runtime.queue.send(debug, 'report-publishers-statements',
+                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                 { hash: hash },
+                                                 request.query))
+    reply({ reportURL: reportURL })
+  }
+},
+
+  auth:
+    { strategy: 'session',
+      scope: [ 'ledger' ],
+      mode: 'required'
+    },
+
+  description: 'Returns statements for publishers',
+  tags: [ 'api' ],
+
+  validate:
+    { params: { hash: Joi.string().hex().required().description('transaction hash') },
+      query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
+    }
+}
+
+/*
    GET /v1/reports/publishers/status
  */
 
@@ -288,6 +355,8 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/publishers/contributions').config(v1.publishers.contributions),
   braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/settlements').config(v1.publisher.settlements),
   braveHapi.routes.async().path('/v1/reports/publishers/settlements').config(v1.publishers.settlements),
+  braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/statements').config(v1.publisher.statements),
+  braveHapi.routes.async().path('/v1/reports/publishers/statements/{hash}').config(v1.publishers.statements),
   braveHapi.routes.async().path('/v1/reports/publishers/status').config(v1.publishers.status),
   braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
 ]
