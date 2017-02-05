@@ -554,6 +554,7 @@ v1.verifyToken =
           }
           return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
         }
+        if (j === 0) console.log(data[hint])
       }
     }
 
