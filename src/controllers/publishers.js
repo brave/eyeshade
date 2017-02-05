@@ -430,11 +430,12 @@ var dnsTxtResolver = async function (domain) {
 }
 
 var webResolver = async function (debug, runtime, publisher, path) {
+  debug('webResolver', { publisher: publisher, path: path })
   try {
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
-      debug('webResolver', ex)
+      debug('webResolver', publisher + ': ' + ex.toString())
       throw ex
     }
   }

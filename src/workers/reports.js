@@ -524,7 +524,7 @@ exports.workers = {
                 })
       }
 
-      file = await create(runtime, 'publishers-', payload)
+      file = await create(runtime, 'publishers-statements-', payload)
       try { await file.write(json2csv({ data: data }), true) } catch (ex) {
         debug('reports', { report: 'report-publishers-contributions', reason: ex.toString() })
         file.close()
