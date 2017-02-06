@@ -360,12 +360,17 @@ exports.workers = {
         },
         { $group:
           { _id: '$publisher',
-            satoshis: { $sum: '$satoshis' }
+            satoshis: { $sum: '$satoshis' },
+            fees: { $sum: '$fees' }
           }
         }
       ])
       previous.forEach(function (entry) {
-        if (typeof publishers[entry._id] !== 'undefined') publishers[entry._id].satoshis -= entry.satoshis
+        if (typeof publishers[entry._id] === 'undefined') return
+
+        publishers[entry._id].satoshis -= entry.satoshis
+        publishers[entry._id].fees -= entry.fees
+        if (publishers[entry._id].fees < 0) publishers[entry._id].fees = 0
       })
 
       usd = runtime.wallet.rates.USD
