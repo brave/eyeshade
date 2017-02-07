@@ -126,7 +126,7 @@ v1.publishers.contributions =
                          'the format of the report'
                        ),
                summary: Joi.boolean().optional().default(true).description('summarize report'),
-               authorized: Joi.boolean().optional().description('filter on authorization'),
+               authorized: Joi.boolean().optional().description('filter on authorization status'),
                amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
                currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency')
               } }
@@ -302,7 +302,8 @@ v1.publishers.status =
                          'the format of the response'
                        ),
                elide: Joi.boolean().optional().default(true).description('elide contact information'),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
+               summary: Joi.boolean().optional().default(true).description('summarize report'),
+               verified: Joi.boolean().optional().description('filter on verification status')
               } },
 
   response:

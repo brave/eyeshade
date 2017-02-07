@@ -547,6 +547,7 @@ exports.workers = {
       , format         : 'json' | 'csv'
       , elide          :  true  | false
       , summary        :  true  | false
+      , verified       :  true  | false
       }
     }
  */
@@ -557,6 +558,7 @@ exports.workers = {
       var format = payload.format || 'csv'
       var elideP = payload.elide
       var summaryP = payload.summary
+      var verifiedP = payload.verified
       var publishers = runtime.db.get('publishers', debug)
       var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
@@ -574,6 +576,8 @@ exports.workers = {
 
         publisher = entry.publisher
         if (!publisher) return
+
+        if ((typeof verifiedP === 'boolean') && (entry.verified !== verifiedP)) return
 
         if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
         if (entry.verified) {
