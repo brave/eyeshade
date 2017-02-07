@@ -385,7 +385,7 @@ v1.deletePublisher =
     if (entries.length === 0) return reply(boom.notFound('no such entry: ' + publisher))
 
     if (underscore.findWhere(entries, { verified: true })) {
-      return reply(boom.data('publisher is already verified: ' + publisher))
+      return reply(boom.badData('publisher is already verified: ' + publisher))
     }
 
     await tokens.remove({ publisher: publisher })
