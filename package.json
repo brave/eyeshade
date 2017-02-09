@@ -47,7 +47,7 @@
     "joi": "^9.0.0-2",
     "json-stringify-safe": "^5.0.1",
     "json2csv": "^3.6.2",
-    "ledger-publisher": "^0.8.116",
+    "ledger-publisher": "^0.8.123",
     "moment": "^2.13.0",
     "mongodb": "^2.1.18",
     "monk": "https://github.com/brave/monk.git",

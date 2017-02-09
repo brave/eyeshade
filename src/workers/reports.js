@@ -577,8 +577,6 @@ exports.workers = {
         publisher = entry.publisher
         if (!publisher) return
 
-        if ((typeof verifiedP === 'boolean') && (entry.verified !== verifiedP)) return
-
         if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
         if (entry.verified) {
           underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId', 'reason' ]))
@@ -590,6 +588,11 @@ exports.workers = {
         results[publisher].history.push(underscore.pick(entry,
                                                         [ 'verificationId', 'verified', 'reason', 'created', 'modified' ]))
       })
+      if (typeof verifiedP === 'boolean') {
+        underscore.keys(results).forEach((publisher) => {
+          if (results[publisher].verified !== verifiedP) delete results[publisher]
+        })
+      }
 
       summary = await voting.aggregate([
         { $match:
