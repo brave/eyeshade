@@ -6,8 +6,6 @@ The Brave Eyeshade is the back-end accountant for the
 
 Note that [travis-ci](https://travis-ci.org/brave/eyeshade) is not yet operational for this repository.
 
-<img src='documentation/ecosystem.png' />
-
 # Initialization
 Take a look at the files in the `config/` directory.
 When the server starts,
