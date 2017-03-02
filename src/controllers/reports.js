@@ -265,7 +265,9 @@ v1.publishers.statements =
 
   validate:
     { params: { hash: Joi.string().hex().required().description('transaction hash') },
-      query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
+      query: { rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
+               summary: Joi.boolean().optional().default(true).description('summarize report')
+             }
     }
 }
 

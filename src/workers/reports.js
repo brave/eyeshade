@@ -465,15 +465,17 @@ exports.workers = {
       , authority      : '...:...'
       , hash           : '...'
       , publisher      : '...'
+      , rollup         :  true  | false
       , summary        :  true  | false
       }
     }
  */
   'report-publishers-statements':
     async function (debug, runtime, payload) {
-      var data, data1, data2, file, entries, publishers, usd
+      var data, data1, data2, file, entries, publishers, query, usd
       var authority = payload.authority
       var hash = payload.hash
+      var rollupP = payload.rollup
       var summaryP = payload.summary
       var publisher = payload.publisher
       var settlements = runtime.db.get('settlements', debug)
@@ -483,6 +485,11 @@ exports.workers = {
         publishers = await mixer(debug, runtime, publisher, false)
       } else {
         entries = await settlements.find({ hash: hash })
+        if (rollupP) {
+          query = { $or: [] }
+          entries.forEach(function (entry) { query.$or.push({ publisher: entry.publisher }) })
+          entries = await settlements.find(query)
+        }
         publishers = await mixer(debug, runtime, undefined, false)
         underscore.keys(publishers).forEach(function (publisher) {
           if (underscore.where(entries, { publisher: publisher }).length === 0) delete publishers[publisher]
