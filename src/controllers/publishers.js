@@ -432,6 +432,7 @@ var dnsTxtResolver = async function (domain) {
 var webResolver = async function (debug, runtime, publisher, path) {
   debug('webResolver', { publisher: publisher, path: path })
   try {
+    debug('webResolver', 'https://' + publisher + path)
     return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
@@ -440,6 +441,7 @@ var webResolver = async function (debug, runtime, publisher, path) {
     }
   }
 
+  debug('webResolver', 'http://' + publisher + path)
   return await braveHapi.wreck.get('http://' + publisher + path, { redirects: 3, timeout: (5 * 1000) })
 }
 
@@ -539,6 +541,7 @@ v1.verifyToken =
             await loser(ex.toString())
             continue
           }
+          debug('verify', 'fetched data for ' + hint)
         }
 
         if (data[hint].indexOf(entry.token) !== -1) {
@@ -554,6 +557,7 @@ v1.verifyToken =
           }
           return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
         }
+        debug('verify', 'no match for ' + hint)
       }
     }
 
