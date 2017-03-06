@@ -433,7 +433,8 @@ var webResolver = async function (debug, runtime, publisher, path) {
   debug('webResolver', { publisher: publisher, path: path })
   try {
     debug('webResolver', 'https://' + publisher + path)
-    return await braveHapi.wreck.get('https://' + publisher + path, { rejectUnauthorized: true, timeout: (5 * 1000) })
+    return await braveHapi.wreck.get('https://' + publisher + path,
+                                     { redirects: 3, rejectUnauthorized: true, timeout: (5 * 1000) })
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
       debug('webResolver', publisher + ': ' + ex.toString())
