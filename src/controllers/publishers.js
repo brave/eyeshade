@@ -558,6 +558,9 @@ v1.verifyToken =
           return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
         }
         debug('verify', 'no match for ' + hint)
+        debug('verify', { token: entry.token, found: data[hint] })
+
+        if (i === 0) break
       }
     }
 
