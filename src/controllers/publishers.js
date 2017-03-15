@@ -323,7 +323,7 @@ v1.patchPublisher =
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
-    if ((legalFormURL.indexOf('void:') === 0) && (legalFormURL !== 'void:form_retry')) {
+    if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0) && (legalFormURL !== 'void:form_retry')) {
       return reply(boom.badData('invalid legalFormURL: ' + legalFormURL))
     }
 
@@ -337,7 +337,7 @@ v1.patchPublisher =
     await publishers.update({ publisher: publisher }, state, { upsert: true })
 
     if (authorized) await notify(debug, runtime, publisher, { type: 'payments_activated' })
-    if (legalFormURL.indexOf('void:') === 0) {
+    if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0)) {
       await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
 
       // void:form_retry
