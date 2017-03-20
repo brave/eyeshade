@@ -586,14 +586,14 @@ exports.workers = {
 
         if (!results[publisher]) results[publisher] = underscore.pick(entry, [ 'publisher', 'verified' ])
         if (entry.verified) {
-          underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId', 'reason' ]))
+          underscore.extend(results[publisher], underscore.pick(entry, [ 'verified', 'verificationId', 'token', 'reason' ]))
         }
 
         if (!results[publisher].history) results[publisher].history = []
         entry.created = new Date(parseInt(entry._id.toHexString().substring(0, 8), 16) * 1000).getTime()
         entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
         results[publisher].history.push(underscore.pick(entry,
-                                                        [ 'verificationId', 'verified', 'reason', 'created', 'modified' ]))
+                                                        [ 'verified', 'verificationId', 'token', 'reason', 'created', 'modified' ]))
       })
       if (typeof verifiedP === 'boolean') {
         underscore.keys(results).forEach((publisher) => {
@@ -679,6 +679,7 @@ exports.workers = {
           if (results[publisher].phone) results[publisher].phone = 'yes'
           if (results[publisher].address) results[publisher].address = 'yes'
           if (results[publisher].verificationId) results[publisher].verificationId = 'yes'
+          if (results[publisher].token) results[publisher].token = 'yes'
           if (results[publisher].legalFormURL) results[publisher].legalFormURL = 'yes'
         }
 
@@ -713,6 +714,7 @@ exports.workers = {
               if (record.phone) record.phone = 'yes'
               if (record.address) record.address = 'yes'
               if (record.verificationId) record.verificationId = 'yes'
+              if (record.token) record.token = 'yes'
             }
             data.push(underscore.extend({ publisher: result.publisher }, record,
                                         { created: dateformat(record.created, datefmt),
@@ -728,7 +730,7 @@ exports.workers = {
                  'name', 'email', 'phone', 'address',
                  'verificationId', 'reason',
                  'daysInQueue', 'created', 'modified',
-                 'legalFormURL' ]
+                 'token', 'legalFormURL' ]
       try { await file.write(json2csv({ data: data, fields: fields }), true) } catch (ex) {
         debug('reports', { report: 'report-publishers-status', reason: ex.toString() })
         file.close()
@@ -745,7 +747,7 @@ exports.workers = {
       , authority      : '...:...'
       , format         : 'json' | 'csv'
       }
-    }
+1    }
  */
   'report-surveyors-contributions':
     async function (debug, runtime, payload) {
