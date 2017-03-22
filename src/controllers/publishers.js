@@ -320,6 +320,7 @@ v1.patchPublisher =
     var payload = request.payload
     var authorized = payload.authorized
     var legalFormURL = payload.legalFormURL
+    var reason = payload.reason
     var debug = braveHapi.debug(module, request)
     var publishers = runtime.db.get('publishers', debug)
 
@@ -341,7 +342,9 @@ v1.patchPublisher =
       await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
 
       // void:form_retry
-      await notify(debug, runtime, publisher, { type: legalFormURL.substr(5) })
+      await notify(debug, runtime, publisher,
+                   underscore.extend({ type: legalFormURL.substr(5) },
+                                     (reason && reason) ? { params: { message: reason } } : {}))
     }
 
     reply({})
@@ -361,7 +364,8 @@ v1.patchPublisher =
     { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
       payload: {
         authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
-        legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL')
+        legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL'),
+        reason: Joi.string().trim().optional().description('explanation for notification')
       }
     },
 
