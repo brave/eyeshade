@@ -442,12 +442,15 @@ var webResolver = async function (debug, runtime, publisher, path) {
   } catch (ex) {
     if (((!ex.isBoom) || (!ex.output) || (ex.output.statusCode !== 504)) && (ex.code !== 'ECONNREFUSED')) {
       debug('webResolver', publisher + ': ' + ex.toString())
-      throw ex
+//    throw ex
     }
+    throw ex
   }
 
+/* http:// no longer acceptable
   debug('webResolver', 'http://' + publisher + path)
   return await braveHapi.wreck.get('http://' + publisher + path, { redirects: 3, timeout: (5 * 1000) })
+ */
 }
 
 var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
