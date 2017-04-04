@@ -1,6 +1,6 @@
 {
   "name": "eyeshade",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "Brave Internal Accounting server.",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "bitcoinjs-lib": "^2.2.0",
     "bitgo": "^2.0.4",
     "blipp": "2.3.0",
+    "bluebird": "3.4.0",
     "boom": "3.0.0",
     "bs58check": "^1.0.5",
     "bson": "0.4.19",
@@ -42,7 +43,8 @@
     "hapi-async-handler": "^1.0.3",
     "hapi-auth-bearer-token": "4.3.0",
     "hapi-auth-cookie": "3.1.0",
-    "hapi-swagger": "https://github.com/brave/hapi-swagger.git",
+    "hapi-rate-limiter": "brave/hapi-rate-limiter",
+    "hapi-swagger": "brave/hapi-swagger",
     "inert": "^3.2.0",
     "joi": "^9.0.0-2",
     "json-stringify-safe": "^5.0.1",

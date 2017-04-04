@@ -1,4 +1,3 @@
-// process.on('warning', warning => console.warn(warning.stack))
 process.env.NEW_RELIC_NO_CONFIG_FILE = true
 if (process.env.NEW_RELIC_APP_NAME && process.env.NEW_RELIC_LICENSE_KEY) { var newrelic = require('newrelic') }
 if (!newrelic) {
@@ -10,6 +9,7 @@ if (!newrelic) {
   }
 }
 
+var boom = require('boom')
 var braveHapi = require('./brave-hapi')
 var debug = new (require('sdebug'))('web')
 var Hapi = require('hapi')
@@ -18,6 +18,7 @@ var routes = require('./controllers/index')
 var underscore = require('underscore')
 var url = require('url')
 var util = require('util')
+var whitelist = require('./hapi-auth-whitelist')
 
 var npminfo = require(path.join(__dirname, '..', 'package'))
 var runtime = require('./runtime.js')
@@ -45,9 +46,40 @@ server.register(
   require('hapi-async-handler'),
   require('hapi-auth-bearer-token'),
   require('hapi-auth-cookie'),
-  require('./hapi-auth-whitelist'),
+  whitelist,
   require('inert'),
   require('vision'),
+  { register: require('hapi-rate-limiter'),
+    options: {
+      defaultRate: (request) => {
+/*  access type            requests/minute per IP address
+    -------------------    ------------------------------
+    anonymous (browser)     60
+    administrator (github)  300
+    server (bearer token)  6000
+ */
+        var authorization, parts, token, tokenlist
+        var limit = 60
+
+        if (whitelist.authorizedP(whitelist.ipaddr(request))) {
+          authorization = request.raw.req.headers.authorization
+          if (authorization) {
+            parts = authorization.split(/\s+/)
+            token = (parts[0].toLowerCase() === 'bearer') && parts[1]
+          } else token = request.query.access_token
+          tokenlist = process.env.TOKEN_LIST ? process.env.TOKEN_LIST.split(',') : []
+          limit = (tokenlist.indexOf(token) !== -1) ? 6000 : 300
+        }
+
+        return { limit: limit, window: 60 }
+      },
+      enabled: true,
+      methods: [ 'get', 'post', 'delete', 'put', 'patch' ],
+      overLimitError: (rate) => boom.tooManyRequests(`try again in ${rate.window} seconds`),
+      rateLimitKey: (request) => whitelist.ipaddr(request) + ':' + runtime.config.server.hostname,
+      redisClient: runtime.config.queue.client
+    }
+  },
   {
     register: require('hapi-swagger'),
     options: {

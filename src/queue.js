@@ -1,5 +1,10 @@
+var bluebird = require('bluebird')
 var debug = new (require('sdebug'))('queue')
+var redis = require('redis')
 var underscore = require('underscore')
+
+bluebird.promisifyAll(redis.RedisClient.prototype)
+bluebird.promisifyAll(redis.Multi.prototype)
 
 var Queue = function (config, runtime) {
   if (!(this instanceof Queue)) return new Queue(config)
@@ -9,7 +14,7 @@ var Queue = function (config, runtime) {
   if (config.queue.rsmq) config.queue = config.queue.rsmq
   if (typeof config.queue === 'string') {
     if (config.queue.indexOf('redis://') === -1) config.queue = 'redis://' + config.queue
-    config.queue = { client: require('redis').createClient(config.queue) }
+    config.queue = { client: redis.createClient(config.queue) }
   }
   this.rsmq = new (require('rsmq'))(config.queue)
   this.runtime = runtime
