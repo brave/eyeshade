@@ -54,21 +54,24 @@ server.register(
       defaultRate: (request) => {
 /*  access type            requests/minute per IP address
     -------------------    ------------------------------
-    anonymous (browser)     60
-    administrator (github)  300
-    server (bearer token)  6000
+    anonymous (browser)       60
+    administrator (github)  3000
+    server (bearer token)  60000
  */
         var authorization, parts, token, tokenlist
+        var ipaddr = whitelist.ipaddr(request)
         var limit = 60
 
-        if (whitelist.authorizedP(whitelist.ipaddr(request))) {
+        if (ipaddr === '127.0.0.1') return { limit: Number.MAX_SAFE_INTEGER, window: 1 }
+
+        if (whitelist.authorizedP(ipaddr)) {
           authorization = request.raw.req.headers.authorization
           if (authorization) {
             parts = authorization.split(/\s+/)
             token = (parts[0].toLowerCase() === 'bearer') && parts[1]
           } else token = request.query.access_token
           tokenlist = process.env.TOKEN_LIST ? process.env.TOKEN_LIST.split(',') : []
-          limit = (tokenlist.indexOf(token) !== -1) ? 6000 : 300
+          limit = (tokenlist.indexOf(token) !== -1) ? 60000 : 3000
         }
 
         return { limit: limit, window: 60 }
