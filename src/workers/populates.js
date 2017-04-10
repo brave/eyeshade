@@ -62,11 +62,11 @@ exports.workers = {
       var populates = runtime.db.get('populates', debug)
       var wallets = runtime.db.get('wallets', debug)
 
+      wallet = wallets.findOne({ address: address })
+      if (!wallet) throw new Error('no such wallet address: ' + address)
+
       if (runtime.wallet.transferP(wallet)) {
         try {
-          wallet = wallets.findOne({ address: address })
-          if (!wallet) throw new Error('no such wallet address: ' + address)
-
           result = runtime.wallet.transfer(wallet, satoshis)
           state = {
             $currentDate: { timestamp: { $type: 'timestamp' } },
