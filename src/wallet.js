@@ -96,11 +96,9 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
 }
 
 Wallet.prototype.transferP = function (info) {
-  console.log('transferP=' + JSON.stringify(info, null, 2))
   var f = Wallet.providers[info.provider].transferP
 
-  if (!f) return
-  return f.bind(this)(info)
+  return ((!!f) && (f.bind(this)(info)))
 }
 
 Wallet.prototype.transfer = async function (info, satoshis) {
@@ -275,6 +273,7 @@ Wallet.providers.bitgo = {
   },
 
   transferP: async function (info) {
+    console.log('transferP=' + ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase)))
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 

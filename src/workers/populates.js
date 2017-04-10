@@ -65,16 +65,16 @@ exports.workers = {
       wallet = await wallets.findOne({ address: address })
       if (!wallet) throw new Error('no such wallet address: ' + address)
 
-      console.log('wallet=' + JSON.stringify(wallet, null, 2))
       if (runtime.wallet.transferP(wallet)) {
         try {
-          result = runtime.wallet.transfer(wallet, satoshis)
+          result = await runtime.wallet.transfer(wallet, satoshis)
           state = {
             $currentDate: { timestamp: { $type: 'timestamp' } },
             $set: underscore.defaults(result, { holdUntil: new Date(now + oneHundredTwentyFourDays) }, payload)
           }
           await populates.update(state, { upsert: true })
-          runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(payload) })
+
+          return runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(payload) })
         } catch (ex) {
           runtime.notify(debug, { channel: '#funding-bot', text: ex.toString() })
         }
