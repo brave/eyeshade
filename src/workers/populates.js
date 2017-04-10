@@ -62,7 +62,7 @@ exports.workers = {
       var populates = runtime.db.get('populates', debug)
       var wallets = runtime.db.get('wallets', debug)
 
-      wallet = async wallets.findOne({ address: address })
+      wallet = await wallets.findOne({ address: address })
       if (!wallet) throw new Error('no such wallet address: ' + address)
 
       console.log('wallet=' + JSON.stringify(wallet, null, 2))
