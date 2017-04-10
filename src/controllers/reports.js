@@ -13,34 +13,34 @@ var v1 = {}
    GET /v1/reports/file/{reportId}
  */
 
-v1.getFile =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var file, reader, writer
-    var debug = braveHapi.debug(module, request)
-    var reportId = request.params.reportId
+v1.getFile = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var file, reader, writer
+      var debug = braveHapi.debug(module, request)
+      var reportId = request.params.reportId
 
-    file = await runtime.db.file(reportId, 'r')
-    if (!file) return reply(boom.notFound('no such report: ' + reportId))
+      file = await runtime.db.file(reportId, 'r')
+      if (!file) return reply(boom.notFound('no such report: ' + reportId))
 
-    reader = runtime.db.source({ filename: reportId })
-    reader.on('error', (err) => {
-      debug('getFile error', err)
-      reply(boom.badImplementation('Sic transit gloria mundi: ' + reportId))
-    }).on('open', () => {
-      debug('getFile open', underscore.pick(file, [ 'contentType', 'metadata' ]))
-      writer = reply(new Readable().wrap(reader))
-      if (file.contentType) {
-        console.log('contentType=' + file.contentType)
-        writer = writer.type(file.contentType)
-      }
-      underscore.keys(file.metadata || {}).forEach((header) => {
-        console.log('header= ' + header + ': ' + file.metadata[header])
-        writer = writer.header(header, file.metadata[header])
+      reader = runtime.db.source({ filename: reportId })
+      reader.on('error', (err) => {
+        debug('getFile error', err)
+        reply(boom.badImplementation('Sic transit gloria mundi: ' + reportId))
+      }).on('open', () => {
+        debug('getFile open', underscore.pick(file, [ 'contentType', 'metadata' ]))
+        writer = reply(new Readable().wrap(reader))
+        if (file.contentType) {
+          console.log('contentType=' + file.contentType)
+          writer = writer.type(file.contentType)
+        }
+        underscore.keys(file.metadata || {}).forEach((header) => {
+          console.log('header= ' + header + ': ' + file.metadata[header])
+          writer = writer.header(header, file.metadata[header])
+        })
       })
-    })
-  }
-},
+    }
+  },
 
   description: 'Gets a report file',
   tags: [ 'api' ],
@@ -57,79 +57,77 @@ v1.publishers = {}
    GET /v1/reports/publishers/contributions
  */
 
-v1.publisher.contributions =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publisher.contributions = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-contributions',
+      await runtime.queue.send(debug, 'report-publishers-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.params, request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about contributions to a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the report'
-                       ),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
-              } }
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
+      summary: Joi.boolean().optional().default(true).description('summarize report')
+    } }
 }
 
-v1.publishers.contributions =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var amount = request.query.amount
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var currency = request.query.currency
-    var rate = runtime.wallet.rates[currency.toUpperCase()]
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var threshold = 0
-    var debug = braveHapi.debug(module, request)
+v1.publishers.contributions = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var amount = request.query.amount
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var currency = request.query.currency
+      var rate = runtime.wallet.rates[currency.toUpperCase()]
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var threshold = 0
+      var debug = braveHapi.debug(module, request)
 
-    if ((amount) && (rate)) threshold = Math.floor((amount / rate) * 1e8)
+      if ((amount) && (rate)) threshold = Math.floor((amount / rate) * 1e8)
 
-    await runtime.queue.send(debug, 'report-publishers-contributions',
+      await runtime.queue.send(debug, 'report-publishers-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  { threshold: threshold },
                                                  request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about contributions to publishers',
   tags: [ 'api' ],
 
-  validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the report'
-                       ),
-               summary: Joi.boolean().optional().default(true).description('summarize report'),
-               authorized: Joi.boolean().optional().description('filter on authorization status'),
-               amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
-               currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency')
-              } }
+  validate: {
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
+      summary: Joi.boolean().optional().default(true).description('summarize report'),
+      authorized: Joi.boolean().optional().description('filter on authorization status'),
+      amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
+      currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency')
+    } }
 }
 
 /*
@@ -137,69 +135,67 @@ v1.publishers.contributions =
    GET /v1/reports/publishers/settlements
  */
 
-v1.publisher.settlements =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publisher.settlements = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-settlements',
+      await runtime.queue.send(debug, 'report-publishers-settlements',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.params, request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about settlements to a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the report'
-                       ),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
-              } }
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
+      summary: Joi.boolean().optional().default(true).description('summarize report')
+    } }
 }
 
-v1.publishers.settlements =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publishers.settlements = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-settlements',
+      await runtime.queue.send(debug, 'report-publishers-settlements',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about settlements to publishers',
   tags: [ 'api' ],
 
-  validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the report'
-                       ),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
-              } }
+  validate: {
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
+      summary: Joi.boolean().optional().default(true).description('summarize report')
+    } }
 }
 
 /*
@@ -207,106 +203,106 @@ v1.publishers.settlements =
    GET /v1/reports/publishers/statements/{hash}
  */
 
-v1.publisher.statements =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publisher.statements = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-statements',
+      await runtime.queue.send(debug, 'report-publishers-statements',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.params, request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns statements for a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
-    }
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
+  }
 }
 
-v1.publishers.statements =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var hash = request.params.hash
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publishers.statements = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var hash = request.params.hash
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-statements',
+      await runtime.queue.send(debug, 'report-publishers-statements',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  { hash: hash },
                                                  request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns statements for publishers',
   tags: [ 'api' ],
 
-  validate:
-    { params: { hash: Joi.string().hex().required().description('transaction hash') },
-      query: { rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
-               summary: Joi.boolean().optional().default(true).description('summarize report')
-             }
+  validate: {
+    params: { hash: Joi.string().hex().required().description('transaction hash') },
+    query: {
+      rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
+      summary: Joi.boolean().optional().default(true).description('summarize report')
     }
+  }
 }
 
 /*
    GET /v1/reports/publishers/status
  */
 
-v1.publishers.status =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.publishers.status = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-publishers-status',
+      await runtime.queue.send(debug, 'report-publishers-status',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger', 'QA' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger', 'QA' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about publisher status',
   tags: [ 'api' ],
 
-  validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the response'
-                       ),
-               elide: Joi.boolean().optional().default(true).description('elide contact information'),
-               summary: Joi.boolean().optional().default(true).description('summarize report'),
-               verified: Joi.boolean().optional().description('filter on verification status')
-              } },
+  validate: {
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the response'),
+      elide: Joi.boolean().optional().default(true).description('elide contact information'),
+      summary: Joi.boolean().optional().default(true).description('summarize report'),
+      verified: Joi.boolean().optional().description('filter on verification status')
+    } },
 
   response:
     { schema: Joi.object().keys().unknown(true) }
@@ -318,35 +314,34 @@ v1.publishers.status =
 
 v1.surveyors = {}
 
-v1.surveyors.contributions =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.surveyors.contributions = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'report-surveyors-contributions',
+      await runtime.queue.send(debug, 'report-surveyors-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
                                                  request.query))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Returns information about contribution activity',
   tags: [ 'api' ],
 
-  validate:
-    { query: { format: Joi.string().valid('json', 'csv').optional().default('csv').description(
-                         'the format of the report'
-                       )
-              } },
+  validate: {
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report')
+    } },
 
   response:
     { schema: Joi.object().keys().unknown(true) }

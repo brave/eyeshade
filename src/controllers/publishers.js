@@ -17,34 +17,36 @@ var prefix = 'brave-ledger-verification='
    POST /v1/publishers/prune
  */
 
-v1.prune =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    var reportId = uuid.v4().toLowerCase()
-    var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-    var debug = braveHapi.debug(module, request)
+v1.prune = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
 
-    await runtime.queue.send(debug, 'prune-publishers',
+      await runtime.queue.send(debug, 'prune-publishers',
                              underscore.extend(request.query,
                                                { reportId: reportId, reportURL: reportURL, authority: authority }))
-    reply({ reportURL: reportURL })
-  }
-},
+      reply({ reportURL: reportURL })
+    }
+  },
 
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Prunes votes corresponding to pruned publishers',
   tags: [ 'api' ],
 
-  validate:
-    { query: { reset: Joi.boolean().optional().default(false).description('reset excluded publishers'),
-               test: Joi.boolean().optional().default(true).description('test actions')
-              } },
+  validate: {
+    query: {
+      reset: Joi.boolean().optional().default(false).description('reset excluded publishers'),
+      test: Joi.boolean().optional().default(true).description('test actions')
+    }
+  },
 
   response:
     { schema: Joi.object().keys().unknown(true) }
@@ -54,48 +56,48 @@ v1.prune =
    POST /v1/publishers/settlement/{hash}
  */
 
-v1.settlement =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entry, i, state
-    var hash = request.params.hash
-    var payload = request.payload
-    var debug = braveHapi.debug(module, request)
-    var settlements = runtime.db.get('settlements', debug)
+v1.settlement = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var entry, i, state
+      var hash = request.params.hash
+      var payload = request.payload
+      var debug = braveHapi.debug(module, request)
+      var settlements = runtime.db.get('settlements', debug)
 
-    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { hash: hash }
-            }
-    for (i = 0; i < payload.length; i++) {
-      entry = payload[i]
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { hash: hash }
+      }
+      for (i = 0; i < payload.length; i++) {
+        entry = payload[i]
 
-      underscore.extend(state.$set, underscore.pick(entry, [ 'address', 'satoshis', 'fees' ]))
-      await settlements.update({ settlementId: entry.transactionId, publisher: entry.publisher }, state, { upsert: true })
+        underscore.extend(state.$set, underscore.pick(entry, [ 'address', 'satoshis', 'fees' ]))
+        await settlements.update({ settlementId: entry.transactionId, publisher: entry.publisher }, state, { upsert: true })
+      }
+
+      reply({})
     }
+  },
 
-    reply({})
-  }
-},
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Posts a settlement for one or more publishers',
   tags: [ 'api' ],
 
-  validate:
-    { params: { hash: Joi.string().hex().required().description('transaction hash') },
-      payload: Joi.array().min(1).items(Joi.object()
-               .keys({
-                 publisher: braveJoi.string().publisher().required().description('the publisher identity'),
-                 address: braveJoi.string().base58().required().description('BTC address'),
-                 satoshis: Joi.number().integer().min(1).required().description('the settlement in satoshis'),
-                 transactionId: Joi.string().guid().description('the transactionId')
-               }).unknown(true)).required().description('publisher settlement report')
-    },
+  validate: {
+    params: { hash: Joi.string().hex().required().description('transaction hash') },
+    payload: Joi.array().min(1).items(Joi.object().keys({
+      publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+      address: braveJoi.string().base58().required().description('BTC address'),
+      satoshis: Joi.number().integer().min(1).required().description('the settlement in satoshis'),
+      transactionId: Joi.string().guid().description('the transactionId')
+    }).unknown(true)).required().description('publisher settlement report')
+  },
 
   response:
     { schema: Joi.object().keys().unknown(true) }
@@ -105,109 +107,110 @@ v1.settlement =
    GET /v1/publishers/{publisher}/balance
  */
 
-v1.getBalance =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var amount, entry, rate, satoshis, summary
-    var publisher = request.params.publisher
-    var currency = request.query.currency
-    var debug = braveHapi.debug(module, request)
-    var settlements = runtime.db.get('settlements', debug)
-    var voting = runtime.db.get('voting', debug)
+v1.getBalance = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var amount, entry, rate, satoshis, summary
+      var publisher = request.params.publisher
+      var currency = request.query.currency
+      var debug = braveHapi.debug(module, request)
+      var settlements = runtime.db.get('settlements', debug)
+      var voting = runtime.db.get('voting', debug)
 
-    summary = await voting.aggregate([
-      { $match:
+      summary = await voting.aggregate([
+        { $match:
         { satoshis: { $gt: 0 },
           publisher: { $eq: publisher },
           exclude: false
         }
-      },
-      { $group:
+        },
+        { $group:
         { _id: '$publisher',
           satoshis: { $sum: '$satoshis' }
         }
-      }
-    ])
-    satoshis = summary.length > 0 ? summary[0].satoshis : 0
+        }
+      ])
+      satoshis = summary.length > 0 ? summary[0].satoshis : 0
 
-    summary = await settlements.aggregate([
-      { $match:
+      summary = await settlements.aggregate([
+        { $match:
         { satoshis: { $gt: 0 },
           publisher: { $eq: publisher }
         }
-      },
-      { $group:
+        },
+        { $group:
         { _id: '$publisher',
           satoshis: { $sum: '$satoshis' }
         }
+        }
+      ])
+      if (summary.length > 0) satoshis -= summary[0].satoshis
+      if (satoshis < 0) satoshis = 0
+
+      rate = runtime.wallet.rates[currency.toUpperCase()]
+      if (rate) {
+        entry = currencyCodes.code(currency)
+        amount = ((satoshis * rate) / 1e8).toFixed(entry ? entry.digits : 2)
       }
-    ])
-    if (summary.length > 0) satoshis -= summary[0].satoshis
-    if (satoshis < 0) satoshis = 0
-
-    rate = runtime.wallet.rates[currency.toUpperCase()]
-    if (rate) {
-      entry = currencyCodes.code(currency)
-      amount = ((satoshis * rate) / 1e8).toFixed(entry ? entry.digits : 2)
+      reply({ amount: amount, currency: currency, satoshis: satoshis })
     }
-    reply({ amount: amount, currency: currency, satoshis: satoshis })
-  }
-},
+  },
 
-  auth:
-    { strategy: 'simple',
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
 
   description: 'Gets the balance for a verified publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
-               access_token: Joi.string().guid().optional() }
-    },
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: {
+      currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
+      access_token: Joi.string().guid().optional() }
+  },
 
-  response:
-    { schema: Joi.object().keys(
-      { amount: Joi.number().min(0).optional().description('the balance in the fiat currency'),
-        currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
-        satoshis: Joi.number().integer().min(0).optional().description('the balance in satoshis')
-      })
-    }
+  response: {
+    schema: Joi.object().keys({
+      amount: Joi.number().min(0).optional().description('the balance in the fiat currency'),
+      currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
+      satoshis: Joi.number().integer().min(0).optional().description('the balance in satoshis')
+    })
+  }
 }
 
 /*
    GET /v1/publishers/{publisher}/status
  */
 
-v1.getStatus =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entry
-    var publisher = request.params.publisher
-    var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
+v1.getStatus = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var entry
+      var publisher = request.params.publisher
+      var debug = braveHapi.debug(module, request)
+      var publishers = runtime.db.get('publishers', debug)
 
-    entry = await publishers.findOne({ publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+      entry = await publishers.findOne({ publisher: publisher })
+      if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
-    reply(underscore.pick(entry, [ 'address', 'authorized' ]))
-  }
-},
+      reply(underscore.pick(entry, [ 'address', 'authorized' ]))
+    }
+  },
 
-  auth:
-    { strategy: 'simple',
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
 
   description: 'Gets the status for a verified publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { access_token: Joi.string().guid().optional() }
-    },
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: { access_token: Joi.string().guid().optional() }
+  },
 
   response:
     { schema: Joi.object().keys().unknown(true).description('the publisher status') }
@@ -217,43 +220,44 @@ v1.getStatus =
    GET /v1/publishers/{publisher}/verifications/{verificationId}
  */
 
-v1.getToken =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entry, state, token
-    var publisher = request.params.publisher
-    var verificationId = request.params.verificationId
-    var debug = braveHapi.debug(module, request)
-    var tokens = runtime.db.get('tokens', debug)
+v1.getToken = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var entry, state, token
+      var publisher = request.params.publisher
+      var verificationId = request.params.verificationId
+      var debug = braveHapi.debug(module, request)
+      var tokens = runtime.db.get('tokens', debug)
 
-    entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
-    if (entry) return reply({ token: entry.token })
+      entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
+      if (entry) return reply({ token: entry.token })
 
-    token = crypto.randomBytes(32).toString('hex')
-    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { token: token }
-            }
-    await tokens.update({ verificationId: verificationId, publisher: publisher }, state, { upsert: true })
+      token = crypto.randomBytes(32).toString('hex')
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { token: token }
+      }
+      await tokens.update({ verificationId: verificationId, publisher: publisher }, state, { upsert: true })
 
-    reply({ token: token })
-  }
-},
+      reply({ token: token })
+    }
+  },
 
-  auth:
-    { strategy: 'simple',
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
 
   description: 'Gets a verification token for a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params:
-      { publisher: braveJoi.string().publisher().required().description('the publisher identity'),
-        verificationId: Joi.string().guid().required().description('identity of the requestor')
-      },
-      query: { access_token: Joi.string().guid().optional() }
+  validate: {
+    params: {
+      publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+      verificationId: Joi.string().guid().required().description('identity of the requestor')
     },
+    query: { access_token: Joi.string().guid().optional() }
+  },
 
   response:
     { schema: Joi.object().keys({ token: Joi.string().hex().length(64).required().description('verification token') }) }
@@ -263,46 +267,48 @@ v1.getToken =
    PUT /v1/publishers/{publisher}/wallet
  */
 
-v1.setWallet =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entry, state
-    var publisher = request.params.publisher
-    var bitcoinAddress = request.payload.bitcoinAddress
-    var verificationId = request.payload.verificationId
-    var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
-    var tokens = runtime.db.get('tokens', debug)
+v1.setWallet = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var entry, state
+      var publisher = request.params.publisher
+      var bitcoinAddress = request.payload.bitcoinAddress
+      var verificationId = request.payload.verificationId
+      var debug = braveHapi.debug(module, request)
+      var publishers = runtime.db.get('publishers', debug)
+      var tokens = runtime.db.get('tokens', debug)
 
-    entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+      entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
+      if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
-    if (!entry.verified) return reply(boom.badData('not verified: ' + publisher + ' using ' + verificationId))
+      if (!entry.verified) return reply(boom.badData('not verified: ' + publisher + ' using ' + verificationId))
 
-    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: { address: bitcoinAddress }
-            }
-    await publishers.update({ publisher: publisher }, state, { upsert: true })
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { address: bitcoinAddress }
+      }
+      await publishers.update({ publisher: publisher }, state, { upsert: true })
 
-    reply({})
-  }
-},
+      reply({})
+    }
+  },
 
-  auth:
-    { strategy: 'simple',
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
 
   description: 'Sets the bitcoin address for a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { access_token: Joi.string().guid().optional() },
-      payload: { bitcoinAddress: braveJoi.string().base58().required().description('BTC address'),
-                 verificationId: Joi.string().guid().required().description('identity of the requestor')
-               }
-    },
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: { access_token: Joi.string().guid().optional() },
+    payload: {
+      bitcoinAddress: braveJoi.string().base58().required().description('BTC address'),
+      verificationId: Joi.string().guid().required().description('identity of the requestor')
+    }
+  },
 
   response:
     { schema: Joi.object().length(0) }
@@ -312,62 +318,63 @@ v1.setWallet =
    PATCH /v1/publishers/{publisher}
  */
 
-v1.patchPublisher =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var authority, entry, state
-    var publisher = request.params.publisher
-    var payload = request.payload
-    var authorized = payload.authorized
-    var legalFormURL = payload.legalFormURL
-    var reason = payload.reason
-    var debug = braveHapi.debug(module, request)
-    var publishers = runtime.db.get('publishers', debug)
+v1.patchPublisher = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var authority, entry, state
+      var publisher = request.params.publisher
+      var payload = request.payload
+      var authorized = payload.authorized
+      var legalFormURL = payload.legalFormURL
+      var reason = payload.reason
+      var debug = braveHapi.debug(module, request)
+      var publishers = runtime.db.get('publishers', debug)
 
-    if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0) && (legalFormURL !== 'void:form_retry')) {
-      return reply(boom.badData('invalid legalFormURL: ' + legalFormURL))
-    }
+      if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0) && (legalFormURL !== 'void:form_retry')) {
+        return reply(boom.badData('invalid legalFormURL: ' + legalFormURL))
+      }
 
-    entry = await publishers.findOne({ publisher: publisher })
-    if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+      entry = await publishers.findOne({ publisher: publisher })
+      if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
-    authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-    state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-              $set: underscore.extend(payload, { authority: authority })
-            }
-    await publishers.update({ publisher: publisher }, state, { upsert: true })
+      authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: underscore.extend(payload, { authority: authority })
+      }
+      await publishers.update({ publisher: publisher }, state, { upsert: true })
 
-    if (authorized) await notify(debug, runtime, publisher, { type: 'payments_activated' })
-    if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0)) {
-      await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
+      if (authorized) await notify(debug, runtime, publisher, { type: 'payments_activated' })
+      if ((legalFormURL) && (legalFormURL.indexOf('void:') === 0)) {
+        await publish(debug, runtime, 'patch', publisher, '/legal_form', { brave_status: 'void' })
 
       // void:form_retry
-      await notify(debug, runtime, publisher,
+        await notify(debug, runtime, publisher,
                    underscore.extend({ type: legalFormURL.substr(5) },
                                      (reason && reason) ? { params: { message: reason } } : {}))
+      }
+
+      reply({})
     }
+  },
 
-    reply({})
-  }
-},
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Sets the approved legal form and authorizes the publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      payload: {
-        authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
-        legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL'),
-        reason: Joi.string().trim().optional().description('explanation for notification')
-      }
-    },
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    payload: {
+      authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
+      legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL'),
+      reason: Joi.string().trim().optional().description('explanation for notification')
+    }
+  },
 
   response:
     { schema: Joi.object().length(0) }
@@ -377,32 +384,32 @@ v1.patchPublisher =
    DELETE /v1/publishers/{publisher}
  */
 
-v1.deletePublisher =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var entries
-    var publisher = request.params.publisher
-    var debug = braveHapi.debug(module, request)
-    var tokens = runtime.db.get('tokens', debug)
+v1.deletePublisher = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var entries
+      var publisher = request.params.publisher
+      var debug = braveHapi.debug(module, request)
+      var tokens = runtime.db.get('tokens', debug)
 
-    entries = await tokens.find({ publisher: publisher })
-    if (entries.length === 0) return reply(boom.notFound('no such entry: ' + publisher))
+      entries = await tokens.find({ publisher: publisher })
+      if (entries.length === 0) return reply(boom.notFound('no such entry: ' + publisher))
 
-    if (underscore.findWhere(entries, { verified: true })) {
-      return reply(boom.badData('publisher is already verified: ' + publisher))
+      if (underscore.findWhere(entries, { verified: true })) {
+        return reply(boom.badData('publisher is already verified: ' + publisher))
+      }
+
+      await tokens.remove({ publisher: publisher })
+
+      reply({})
     }
+  },
 
-    await tokens.remove({ publisher: publisher })
-
-    reply({})
-  }
-},
-
-  auth:
-    { strategy: 'session',
-      scope: [ 'ledger' ],
-      mode: 'required'
-    },
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
 
   description: 'Deletes a non-verified publisher',
   tags: [ 'api' ],
@@ -462,17 +469,20 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   message = underscore.extend(underscore.clone(indices), { verified: verified, reason: reason })
   debug('verified', message)
   if (/* (!backgroundP) || */ (verified)) {
-    runtime.notify(debug,
-                   { channel: '#publishers-bot', text: (verified ? '' : 'not ') + 'verified: ' + JSON.stringify(message) })
+    runtime.notify(debug, {
+      channel: '#publishers-bot',
+      text: (verified ? '' : 'not ') + 'verified: ' + JSON.stringify(message)
+    })
   }
 
   entry.verified = verified
   if (reason.indexOf('Error: ') === 0) reason = reason.substr(7)
   if (reason.indexOf('Client request error: ') === 0) reason = reason.substr(22)
   if (reason.indexOf('Hostname/IP doesn\'t match certificate\'s altnames: ') === 0) reason = reason.substr(0, 48)
-  state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: { verified: entry.verified, reason: reason.substr(0, 64) }
-          }
+  state = {
+    $currentDate: { timestamp: { $type: 'timestamp' } },
+    $set: { verified: entry.verified, reason: reason.substr(0, 64) }
+  }
   await tokens.update(indices, state, { upsert: true })
 
   reason = reason || (verified ? 'ok' : 'unknown')
@@ -484,111 +494,111 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
   reply({ status: 'success', verificationId: entry.verificationId })
 }
 
-v1.verifyToken =
-{ handler: function (runtime) {
-  return async function (request, reply) {
-    var data, entry, entries, hint, i, info, j, matchP, pattern, reason, rr, rrset
-    var publisher = request.params.publisher
-    var backgroundP = request.query.backgroundP
-    var debug = braveHapi.debug(module, request)
-    var tokens = runtime.db.get('tokens', debug)
+v1.verifyToken = {
+  handler: function (runtime) {
+    return async function (request, reply) {
+      var data, entry, entries, hint, i, info, j, matchP, pattern, reason, rr, rrset
+      var publisher = request.params.publisher
+      var backgroundP = request.query.backgroundP
+      var debug = braveHapi.debug(module, request)
+      var tokens = runtime.db.get('tokens', debug)
 
-    entries = await tokens.find({ publisher: publisher })
-    if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))
+      entries = await tokens.find({ publisher: publisher })
+      if (entries.length === 0) return reply(boom.notFound('no such publisher: ' + publisher))
 
-    for (i = 0; i < entries.length; i++) {
-      entry = entries[i]
-      if (entry.verified) {
-        await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: entry.verified })
-        return reply({ status: 'success', verificationId: entry.verificationId })
-      }
-    }
-
-    try { rrset = await dnsTxtResolver(publisher) } catch (ex) {
-      reason = ex.toString()
-      if (reason.indexOf('ENODATA') === -1) {
-        debug('dnsTxtResolver', underscore.extend({ publisher: publisher, reason: reason }))
-      }
-      rrset = []
-    }
-    for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
-
-    var loser = async function (reason) {
-      debug('verify', underscore.extend(info, { reason: reason }))
-      await verified(request, reply, runtime, entry, false, backgroundP, reason)
-    }
-
-    info = { publisher: publisher }
-    data = {}
-    for (i = 0; i < entries.length; i++) {
-      entry = entries[i]
-      info.verificationId = entry.verificationId
-
-      for (j = 0; j < rrset.length; j++) {
-        rr = rrset[j]
-        if (rr.indexOf(prefix) !== 0) continue
-
-        matchP = true
-        if (rr.substring(prefix.length) !== entry.token) {
-          await loser('TXT RR suffix mismatch ' + prefix + entry.token)
-          continue
+      for (i = 0; i < entries.length; i++) {
+        entry = entries[i]
+        if (entry.verified) {
+          await runtime.queue.send(debug, 'publisher-report', { publisher: entry.publisher, verified: entry.verified })
+          return reply({ status: 'success', verificationId: entry.verificationId })
         }
-
-        return await verified(request, reply, runtime, entry, true, backgroundP, 'TXT RR matches')
-      }
-      if (!matchP) {
-        if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix)
-        matchP = false
       }
 
-      for (j = 0; j < hintsK.length; j++) {
-        hint = hintsK[j]
-        if (typeof data[hint] === 'undefined') {
-          try { data[hint] = (await webResolver(debug, runtime, publisher, hints[hint])).toString() } catch (ex) {
-            data[hint] = ''
-            await loser(ex.toString())
+      try { rrset = await dnsTxtResolver(publisher) } catch (ex) {
+        reason = ex.toString()
+        if (reason.indexOf('ENODATA') === -1) {
+          debug('dnsTxtResolver', underscore.extend({ publisher: publisher, reason: reason }))
+        }
+        rrset = []
+      }
+      for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
+
+      var loser = async function (reason) {
+        debug('verify', underscore.extend(info, { reason: reason }))
+        await verified(request, reply, runtime, entry, false, backgroundP, reason)
+      }
+
+      info = { publisher: publisher }
+      data = {}
+      for (i = 0; i < entries.length; i++) {
+        entry = entries[i]
+        info.verificationId = entry.verificationId
+
+        for (j = 0; j < rrset.length; j++) {
+          rr = rrset[j]
+          if (rr.indexOf(prefix) !== 0) continue
+
+          matchP = true
+          if (rr.substring(prefix.length) !== entry.token) {
+            await loser('TXT RR suffix mismatch ' + prefix + entry.token)
             continue
           }
-          debug('verify', 'fetched data for ' + hint)
+
+          return verified(request, reply, runtime, entry, true, backgroundP, 'TXT RR matches')
+        }
+        if (!matchP) {
+          if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix)
+          matchP = false
         }
 
-        if (data[hint].indexOf(entry.token) !== -1) {
-          switch (hint) {
-            case root:
-              pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
-                        '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
-              if (!data[hint].match(pattern)) continue
-              break
-
-            default:
-              break
+        for (j = 0; j < hintsK.length; j++) {
+          hint = hintsK[j]
+          if (typeof data[hint] === 'undefined') {
+            try { data[hint] = (await webResolver(debug, runtime, publisher, hints[hint])).toString() } catch (ex) {
+              data[hint] = ''
+              await loser(ex.toString())
+              continue
+            }
+            debug('verify', 'fetched data for ' + hint)
           }
-          return await verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
+
+          if (data[hint].indexOf(entry.token) !== -1) {
+            switch (hint) {
+              case root:
+                pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
+                        '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
+                if (!data[hint].match(pattern)) continue
+                break
+
+              default:
+                break
+            }
+            return verified(request, reply, runtime, entry, true, backgroundP, hint + ' web file matches')
+          }
+          debug('verify', 'no match for ' + hint)
+
+          if (i === 0) break
         }
-        debug('verify', 'no match for ' + hint)
-
-        if (i === 0) break
       }
-    }
 
-    return reply({ status: 'failure' })
-  }
-},
+      return reply({ status: 'failure' })
+    }
+  },
 
   description: 'Verifies a publisher',
   tags: [ 'api' ],
 
-  validate:
-    { params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
-      query: { backgroundP: Joi.boolean().optional().default(false).description('running in the background') }
-    },
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: { backgroundP: Joi.boolean().optional().default(false).description('running in the background') }
+  },
 
-  response:
-    { schema: Joi.object().keys(
-      { status: Joi.string().valid('success', 'failure').required().description('victory is mine!'),
-        verificationId: Joi.string().guid().optional().description('identity of the verified requestor')
-      })
-    }
+  response: {
+    schema: Joi.object().keys({
+      status: Joi.string().valid('success', 'failure').required().description('victory is mine!'),
+      verificationId: Joi.string().guid().optional().description('identity of the verified requestor')
+    })
+  }
 }
 
 var publish = async function (debug, runtime, method, publisher, endpoint, payload) {
@@ -597,12 +607,12 @@ var publish = async function (debug, runtime, method, publisher, endpoint, paylo
   try {
     result = await braveHapi.wreck[method](runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher) +
                                         endpoint,
-                                      { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token,
-                                                   'content-type': 'application/json'
-                                                 },
-                                        payload: JSON.stringify(payload),
-                                        useProxyP: true
-                                      })
+      { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token,
+        'content-type': 'application/json'
+      },
+        payload: JSON.stringify(payload),
+        useProxyP: true
+      })
     if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
     debug('publishers', { method: method, publisher: publisher, endpoint: endpoint, reason: result })
   } catch (ex) {
@@ -637,42 +647,45 @@ module.exports.routes = [
 module.exports.initialize = async function (debug, runtime) {
   var resolvers
 
-  runtime.db.checkIndices(debug,
-  [ { category: runtime.db.get('publishers', debug),
+  runtime.db.checkIndices(debug, [
+    {
+      category: runtime.db.get('publishers', debug),
       name: 'publishers',
       property: 'publisher',
-      empty: { publisher: '',
-               verified: false,
-               address: '',
-               legalFormURL: '',
-               authorized: false,
-               authority: '',
-               timestamp: bson.Timestamp.ZERO
-             },
+      empty: {
+        publisher: '',
+        verified: false,
+        address: '',
+        legalFormURL: '',
+        authorized: false,
+        authority: '',
+        timestamp: bson.Timestamp.ZERO
+      },
       unique: [ { publisher: 1 } ],
-      others: [ { verified: 1 }, { address: 0 }, { legalFormURL: 0 }, { authorized: 1 }, { authority: 1 }, { timestamp: 1 } ]
+      others: [ { verified: 1 }, { address: 1 }, { legalFormURL: 1 }, { authorized: 1 }, { authority: 1 }, { timestamp: 1 } ]
     },
-    { category: runtime.db.get('settlements', debug),
+    {
+      category: runtime.db.get('settlements', debug),
       name: 'settlements',
-      property: 'settlementId_0_publisher',
-      empty: { settlementId: '', publisher: '', hash: '', address: '', satoshis: 0, fees: 0, timestamp: bson.Timestamp.ZERO },
-      unique: [ { settlementId: 0, publisher: 1 }, { hash: 0, publisher: 1 } ],
-      others: [ { address: 0 }, { satoshis: 1 }, { fees: 1 }, { timestamp: 1 } ]
+      property: 'settlementId_1_publisher',
+      empty: { settlementId: '', publisher: '', hash: '', address: '', satoshis: 1, fees: 1, timestamp: bson.Timestamp.ZERO },
+      unique: [ { settlementId: 1, publisher: 1 }, { hash: 1, publisher: 1 } ],
+      others: [ { address: 1 }, { satoshis: 1 }, { fees: 1 }, { timestamp: 1 } ]
     },
-    { category: runtime.db.get('tokens', debug),
+    {
+      category: runtime.db.get('tokens', debug),
       name: 'tokens',
-      property: 'verificationId_0_publisher',
+      property: 'verificationId_1_publisher',
       empty: { verificationId: '', publisher: '', token: '', verified: false, reason: '', timestamp: bson.Timestamp.ZERO },
-      unique: [ { verificationId: 0, publisher: 1 } ],
-      others: [ { token: 0 }, { verified: 1 }, { reason: 1 }, { timestamp: 1 } ]
+      unique: [ { verificationId: 1, publisher: 1 } ],
+      others: [ { token: 1 }, { verified: 1 }, { reason: 1 }, { timestamp: 1 } ]
     }
   ])
 
   await runtime.queue.create('prune-publishers')
   await runtime.queue.create('publisher-report')
 
-  resolvers = dns.getServers()
-  resolvers.splice(0, 0, '8.8.8.8', '8.8.4.4')
+  resolvers = underscore.uniq([ '8.8.8.8', '8.8.4.4' ].concat(dns.getServers()))
   debug('publishers', { resolvers: resolvers })
   dns.setServers(resolvers)
 }

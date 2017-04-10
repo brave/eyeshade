@@ -24,7 +24,7 @@ var create = async function (runtime, prefix, params) {
   }
   filename = prefix + dateformat(underscore.now(), datefmt2) + extension
   options.metadata = { 'content-disposition': 'attachment; filename="' + filename + '"' }
-  return await runtime.db.file(params.reportId, 'w', options)
+  return runtime.db.file(params.reportId, 'w', options)
 }
 
 var daily = async function (debug, runtime) {
@@ -99,39 +99,39 @@ var quanta = async function (debug, runtime) {
   results = await contributions.aggregate([
     { $match: { satoshis: { $gt: 0 } } },
     { $group:
-      { _id: '$surveyorId',
-        satoshis: { $sum: '$satoshis' },
-        fee: { $sum: '$fee' },
-        inputs: { $sum: { $subtract: [ '$satoshis', '$fee' ] } },
-        votes: { $sum: '$votes' }
-      }
+    { _id: '$surveyorId',
+      satoshis: { $sum: '$satoshis' },
+      fee: { $sum: '$fee' },
+      inputs: { $sum: { $subtract: [ '$satoshis', '$fee' ] } },
+      votes: { $sum: '$votes' }
+    }
     },
     { $project:
-      { _id: 1,
-        satoshis: 1,
-        fee: 1,
-        inputs: 1,
-        votes: 1,
-        quantum: { $divide: [ '$inputs', '$votes' ] }
-      }
+    { _id: 1,
+      satoshis: 1,
+      fee: 1,
+      inputs: 1,
+      votes: 1,
+      quantum: { $divide: [ '$inputs', '$votes' ] }
+    }
     }
   ])
   votes = await voting.aggregate([
-      { $match:
-        { counts: { $gt: 0 },
-          exclude: false
-        }
-      },
-      { $group:
-        { _id: '$surveyorId',
-          counts: { $sum: '$counts' }
-        }
-      },
-      { $project:
-        { _id: 1,
-          counts: 1
-        }
-      }
+    { $match:
+    { counts: { $gt: 0 },
+      exclude: false
+    }
+    },
+    { $group:
+    { _id: '$surveyorId',
+      counts: { $sum: '$counts' }
+    }
+    },
+    { $project:
+    { _id: 1,
+      counts: 1
+    }
+    }
   ])
 
   for (i = 0; i < results.length; i++) await dicer(results[i])
@@ -173,12 +173,12 @@ var mixer = async function (debug, runtime, publisher, reportP) {
       publishers[slice.publisher].satoshis += satoshis
       publishers[slice.publisher].fees += fees
       publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
-                                               lastUpdated: (slice.timestamp.high_ * 1000) +
+        lastUpdated: (slice.timestamp.high_ * 1000) +
                                                               (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
-                                               counts: slice.counts,
-                                               satoshis: satoshis,
-                                               fees: fees
-                                             })
+        counts: slice.counts,
+        satoshis: satoshis,
+        fees: fees
+      })
       if (slice.satoshis === satoshis) continue
 
       state = { $set: { satoshis: satoshis } }
@@ -240,18 +240,18 @@ var publisherContributions = function (runtime, publishers, authority, authorize
     satoshis += result.satoshis
     fees += result.fees
     data.push({ publisher: result.publisher,
-                satoshis: result.satoshis,
-                fees: result.fees,
-                'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
-                'processor USD': (result.fees * usd).toFixed(currency.digits)
-              })
+      satoshis: result.satoshis,
+      fees: result.fees,
+      'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
+      'processor USD': (result.fees * usd).toFixed(currency.digits)
+    })
     if (!summaryP) {
       underscore.sortBy(result.votes, 'lastUpdated').forEach((vote) => {
         data.push(underscore.extend({ publisher: result.publisher },
                                     underscore.omit(vote, [ 'surveyorId', 'updated' ]),
-                                    { transactionId: vote.surveyorId,
-                                      lastUpdated: dateformat(vote.lastUpdated, datefmt)
-                                    }))
+          { transactionId: vote.surveyorId,
+            lastUpdated: dateformat(vote.lastUpdated, datefmt)
+          }))
       })
     }
   })
@@ -274,7 +274,7 @@ var publisherSettlements = function (runtime, entries, format, summaryP, usd) {
     entry.modified = (entry.timestamp.high_ * 1000) + (entry.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
 
     publishers[entry.publisher].txns.push(underscore.pick(entry, [ 'satoshis', 'fees', 'settlementId', 'address',
-                                                                   'hash', 'created', 'modified' ]))
+      'hash', 'created', 'modified' ]))
   })
 
   results = []
@@ -294,18 +294,18 @@ var publisherSettlements = function (runtime, entries, format, summaryP, usd) {
     satoshis += result.satoshis
     fees += result.fees
     data.push({ publisher: result.publisher,
-                satoshis: result.satoshis,
-                fees: result.fees,
-                'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
-                'processor USD': (result.fees * usd).toFixed(currency.digits)
-              })
+      satoshis: result.satoshis,
+      fees: result.fees,
+      'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
+      'processor USD': (result.fees * usd).toFixed(currency.digits)
+    })
     if (!summaryP) {
       result.txns.forEach((txn) => {
         data.push(underscore.extend({ publisher: result.publisher },
                                     underscore.omit(txn, [ 'hash', 'settlementId', 'created', 'modified' ]),
-                                    { transactionId: txn.hash,
-                                      lastUpdated: txn.created && dateformat(txn.created, datefmt)
-                                    }))
+          { transactionId: txn.hash,
+            lastUpdated: txn.created && dateformat(txn.created, datefmt)
+          }))
       })
     }
   })
@@ -332,7 +332,7 @@ exports.workers = {
     , message          :
       { reportId       : '...'
       , reportURL      : '...'
-      , authorized     :  true  | false
+      , authorized     :  true  | false | undefined
       , authority      : '...:...'
       , format         : 'json' | 'csv'
       , publisher      : '...'
@@ -359,10 +359,10 @@ exports.workers = {
           { satoshis: { $gt: 0 } }
         },
         { $group:
-          { _id: '$publisher',
-            satoshis: { $sum: '$satoshis' },
-            fees: { $sum: '$fees' }
-          }
+        { _id: '$publisher',
+          satoshis: { $sum: '$satoshis' },
+          fees: { $sum: '$fees' }
+        }
         }
       ])
       previous.forEach(function (entry) {
@@ -383,16 +383,16 @@ exports.workers = {
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
-                                       text: authority + ' report-publishers-contributions completed' })
+          text: authority + ' report-publishers-contributions completed' })
       }
 
       if (!publisher) {
         data.push({ publisher: 'TOTAL',
-                    satoshis: info.satoshis,
-                    fees: info.fees,
-                    'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
-                    'processor USD': (info.fees * usd).toFixed(currency.digits)
-                  })
+          satoshis: info.satoshis,
+          fees: info.fees,
+          'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
+          'processor USD': (info.fees * usd).toFixed(currency.digits)
+        })
       }
 
       try { await file.write(json2csv({ data: data }), true) } catch (ex) {
@@ -436,16 +436,16 @@ exports.workers = {
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
-                                       text: authority + ' report-publishers-settlements completed' })
+          text: authority + ' report-publishers-settlements completed' })
       }
 
       if (!publisher) {
         data.push({ publisher: 'TOTAL',
-                    satoshis: info.satoshis,
-                    fees: info.fees,
-                    'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
-                    'processor USD': (info.fees * usd).toFixed(currency.digits)
-                })
+          satoshis: info.satoshis,
+          fees: info.fees,
+          'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
+          'processor USD': (info.fees * usd).toFixed(currency.digits)
+        })
       }
 
       try { await file.write(json2csv({ data: data }), true) } catch (ex) {
@@ -522,18 +522,18 @@ exports.workers = {
       })
       if (!publisher) {
         data.push({ publisher: 'TOTAL',
-                    satoshis: data1.satoshis,
-                    fees: data1.fees,
-                    'publisher USD': (data1.satoshis * usd).toFixed(currency.digits),
-                    'processor USD': (data1.fees * usd).toFixed(currency.digits)
-                  })
+          satoshis: data1.satoshis,
+          fees: data1.fees,
+          'publisher USD': (data1.satoshis * usd).toFixed(currency.digits),
+          'processor USD': (data1.fees * usd).toFixed(currency.digits)
+        })
         if (!summaryP) data.push([])
         data.push({ publisher: 'TOTAL',
-                    satoshis: data2.satoshis,
-                    fees: data2.fees,
-                    'publisher USD': (data2.satoshis * usd).toFixed(currency.digits),
-                    'processor USD': (data2.fees * usd).toFixed(currency.digits)
-                })
+          satoshis: data2.satoshis,
+          fees: data2.fees,
+          'publisher USD': (data2.satoshis * usd).toFixed(currency.digits),
+          'processor USD': (data2.fees * usd).toFixed(currency.digits)
+        })
       }
 
       file = await create(runtime, 'publishers-statements-', payload)
@@ -554,7 +554,7 @@ exports.workers = {
       , format         : 'json' | 'csv'
       , elide          :  true  | false
       , summary        :  true  | false
-      , verified       :  true  | false
+      , verified       :  true  | false | undefined
       }
     }
  */
@@ -603,14 +603,14 @@ exports.workers = {
 
       summary = await voting.aggregate([
         { $match:
-          { satoshis: { $gt: 0 },
+        { satoshis: { $gt: 0 },
           exclude: false
-          }
+        }
         },
         { $group:
-          { _id: '$publisher',
-            satoshis: { $sum: '$satoshis' }
-          }
+        { _id: '$publisher',
+          satoshis: { $sum: '$satoshis' }
+        }
         }
       ])
       satoshis = {}
@@ -620,9 +620,9 @@ exports.workers = {
           { satoshis: { $gt: 0 } }
         },
         { $group:
-          { _id: '$publisher',
-            satoshis: { $sum: '$satoshis' }
-          }
+        { _id: '$publisher',
+          satoshis: { $sum: '$satoshis' }
+        }
         }
       ])
       summary.forEach(function (entry) {
@@ -652,9 +652,9 @@ exports.workers = {
 
         try {
           result = await braveHapi.wreck.get(runtime.config.publishers.url + '/api/publishers/' + encodeURIComponent(publisher),
-                                            { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
-                                              useProxyP: true
-                                            })
+            { headers: { authorization: 'Bearer ' + runtime.config.publishers.access_token },
+              useProxyP: true
+            })
           if (Buffer.isBuffer(result)) result = JSON.parse(result)
           datum = underscore.findWhere(result, { id: results[publisher].verificationId })
           if (datum) {
@@ -694,7 +694,7 @@ exports.workers = {
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
-                                       text: authority + ' report-publishers-status completed' })
+          text: authority + ' report-publishers-status completed' })
       }
 
       data = []
@@ -703,10 +703,10 @@ exports.workers = {
           underscore.extend(result, underscore.pick(underscore.last(result.history), [ 'created', 'modified' ]))
         }
         data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-                                    { created: dateformat(result.created, datefmt),
-                                      modified: dateformat(result.modified, datefmt),
-                                      daysInQueue: daysago(result.created)
-                                    }))
+          { created: dateformat(result.created, datefmt),
+            modified: dateformat(result.modified, datefmt),
+            daysInQueue: daysago(result.created)
+          }))
         if (!summaryP) {
           result.history.forEach((record) => {
             if (elideP) {
@@ -717,20 +717,20 @@ exports.workers = {
               if (record.token) record.token = 'yes'
             }
             data.push(underscore.extend({ publisher: result.publisher }, record,
-                                        { created: dateformat(record.created, datefmt),
-                                          modified: dateformat(record.modified, datefmt),
-                                          daysInQueue: daysago(record.created)
-                                        }))
+              { created: dateformat(record.created, datefmt),
+                modified: dateformat(record.modified, datefmt),
+                daysInQueue: daysago(record.created)
+              }))
           })
         }
       })
 
       fields = [ 'publisher', 'USD', 'satoshis',
-                 'verified', 'authorized', 'authority',
-                 'name', 'email', 'phone', 'address',
-                 'verificationId', 'reason',
-                 'daysInQueue', 'created', 'modified',
-                 'token', 'legalFormURL' ]
+        'verified', 'authorized', 'authority',
+        'name', 'email', 'phone', 'address',
+        'verificationId', 'reason',
+        'daysInQueue', 'created', 'modified',
+        'token', 'legalFormURL' ]
       try { await file.write(json2csv({ data: data, fields: fields }), true) } catch (ex) {
         debug('reports', { report: 'report-publishers-status', reason: ex.toString() })
         file.close()
@@ -761,7 +761,7 @@ exports.workers = {
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
         return runtime.notify(debug, { channel: '#publishers-bot',
-                                       text: authority + ' report-surveyors-contributions completed' })
+          text: authority + ' report-surveyors-contributions completed' })
       }
 
       data.forEach((result) => {

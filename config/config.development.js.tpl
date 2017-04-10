@@ -8,7 +8,11 @@ module.exports =
   { rsmq                : process.env.REDIS_URL            || 'localhost:6379' }
 , wallet                :
   { bitgo               :
-    { environment       : process.env.BITGO_ENVIRONMENT
+    { accessToken       : process.env.BITGO_TOKEN
+    , enterpriseId      : process.env.BITGO_ENTERPRISE_ID
+    , environment       : process.env.BITGO_ENVIRONMENT
+    , fundingAddress    : process.env.BITGO_FUNDING_ADDRESS
+    , fundingPassphrase : process.env.BITGO_FUNDING_PASSPHRASE
     }
   , bitcoin_average     :
     { publicKey         : process.env.BITCOIN_AVERAGE_PUBLIC_KEY

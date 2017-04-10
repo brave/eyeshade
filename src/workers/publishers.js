@@ -29,16 +29,17 @@ exports.workers = {
       file = await runtime.db.file(reportId, 'w', { content_type: 'application/json' })
 
       votes = await voting.aggregate([
-          { $match: { counts: { $gt: 0 },
-                      exclude: reset
-                    }
-          },
+        { $match: { counts: { $gt: 0 },
+          exclude: reset
+        }
+        },
           { $group: { _id: '$publisher' } },
           { $project: { _id: 1 } }
       ])
-      state = { $currentDate: { timestamp: { $type: 'timestamp' } },
-                $set: { exclude: !reset }
-              }
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { exclude: !reset }
+      }
 
       results = []
       if (reset) {
@@ -50,8 +51,10 @@ exports.workers = {
         })
 
         await file.write(JSON.stringify(results.sort(braveHapi.domainCompare), null, 2), true)
-        runtime.notify(debug, { channel: '#publishers-bot',
-                                text: authority + ' prune-publishers completed, count: ' + results.length })
+        runtime.notify(debug, {
+          channel: '#publishers-bot',
+          text: authority + ' prune-publishers completed, count: ' + results.length
+        })
         return
       }
 
@@ -71,8 +74,10 @@ exports.workers = {
       })
 
       await file.write(JSON.stringify(results.sort(braveHapi.domainCompare), null, 2), true)
-      runtime.notify(debug, { channel: '#publishers-bot',
-                              text: authority + ' prune-publishers completed, count: ' + results.length })
+      runtime.notify(debug, {
+        channel: '#publishers-bot',
+        text: authority + ' prune-publishers completed, count: ' + results.length
+      })
     }
 }
 
