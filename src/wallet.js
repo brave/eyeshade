@@ -272,8 +272,7 @@ Wallet.providers.bitgo = {
     return result
   },
 
-  transferP: async function (info) {
-    console.log('transferP=' + ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase)))
+  transferP: function (info) {
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
