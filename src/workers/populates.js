@@ -65,6 +65,7 @@ exports.workers = {
       wallet = wallets.findOne({ address: address })
       if (!wallet) throw new Error('no such wallet address: ' + address)
 
+      console.log('wallet=' + JSON.stringify(wallet, null, 2))
       if (runtime.wallet.transferP(wallet)) {
         try {
           result = runtime.wallet.transfer(wallet, satoshis)

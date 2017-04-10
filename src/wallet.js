@@ -96,6 +96,7 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
 }
 
 Wallet.prototype.transferP = function (info) {
+  console.log('transferP=' + JSON.stringify(info, null, 2))
   var f = Wallet.providers[info.provider].transferP
 
   if (!f) return
