@@ -105,8 +105,7 @@ v1.publishers.contributions = {
 
       await runtime.queue.send(debug, 'report-publishers-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 { threshold: threshold },
-                                                 request.query))
+                                                 { threshold: threshold }, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -244,8 +243,7 @@ v1.publishers.statements = {
 
       await runtime.queue.send(debug, 'report-publishers-statements',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 { hash: hash },
-                                                 request.query))
+                                                 { hash: hash }, request.query))
       reply({ reportURL: reportURL })
     }
   },

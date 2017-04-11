@@ -45,7 +45,8 @@ exports.initialize = async function (debug, runtime) {
       category: runtime.db.get('contributions', debug),
       name: 'contributions',
       property: 'viewingId',
-      empty: { viewingId: '',
+      empty: {
+        viewingId: '',
         paymentId: '',
         address: '',
         paymentStamp: 0,
@@ -64,7 +65,8 @@ exports.initialize = async function (debug, runtime) {
       category: runtime.db.get('voting', debug),
       name: 'voting',
       property: 'surveyorId_1_publisher',
-      empty: { surveyorId: '',
+      empty: {
+        surveyorId: '',
         publisher: '',
         counts: 0,
         timestamp: bson.Timestamp.ZERO,

@@ -7,50 +7,9 @@ var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
 var underscore = require('underscore')
-var url = require('url')
-var uuid = require('uuid')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
-
-/*
-   POST /v1/publishers/prune
- */
-
-v1.prune = {
-  handler: function (runtime) {
-    return async function (request, reply) {
-      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
-      var reportId = uuid.v4().toLowerCase()
-      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
-      var debug = braveHapi.debug(module, request)
-
-      await runtime.queue.send(debug, 'prune-publishers',
-                             underscore.extend(request.query,
-                                               { reportId: reportId, reportURL: reportURL, authority: authority }))
-      reply({ reportURL: reportURL })
-    }
-  },
-
-  auth: {
-    strategy: 'session',
-    scope: [ 'ledger' ],
-    mode: 'required'
-  },
-
-  description: 'Prunes votes corresponding to pruned publishers',
-  tags: [ 'api' ],
-
-  validate: {
-    query: {
-      reset: Joi.boolean().optional().default(false).description('reset excluded publishers'),
-      test: Joi.boolean().optional().default(true).description('test actions')
-    }
-  },
-
-  response:
-    { schema: Joi.object().keys().unknown(true) }
-}
 
 /*
    POST /v1/publishers/settlement/{hash}
@@ -118,30 +77,38 @@ v1.getBalance = {
       var voting = runtime.db.get('voting', debug)
 
       summary = await voting.aggregate([
-        { $match:
-        { satoshis: { $gt: 0 },
-          publisher: { $eq: publisher },
-          exclude: false
-        }
+        {
+          $match:
+          {
+            satoshis: { $gt: 0 },
+            publisher: { $eq: publisher },
+            exclude: false
+          }
         },
-        { $group:
-        { _id: '$publisher',
-          satoshis: { $sum: '$satoshis' }
-        }
+        {
+          $group:
+          {
+            _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
         }
       ])
       satoshis = summary.length > 0 ? summary[0].satoshis : 0
 
       summary = await settlements.aggregate([
-        { $match:
-        { satoshis: { $gt: 0 },
-          publisher: { $eq: publisher }
-        }
+        {
+          $match:
+          {
+            satoshis: { $gt: 0 },
+            publisher: { $eq: publisher }
+          }
         },
-        { $group:
-        { _id: '$publisher',
-          satoshis: { $sum: '$satoshis' }
-        }
+        {
+          $group:
+          {
+            _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
         }
       ])
       if (summary.length > 0) satoshis -= summary[0].satoshis
@@ -633,7 +600,6 @@ var notify = async function (debug, runtime, publisher, payload) {
 }
 
 module.exports.routes = [
-  braveHapi.routes.async().post().path('/v1/publishers/prune').config(v1.prune),
   braveHapi.routes.async().post().path('/v1/publishers/settlement/{hash}').config(v1.settlement),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),

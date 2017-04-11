@@ -97,40 +97,54 @@ var quanta = async function (debug, runtime) {
   }
 
   results = await contributions.aggregate([
-    { $match: { satoshis: { $gt: 0 } } },
-    { $group:
-    { _id: '$surveyorId',
-      satoshis: { $sum: '$satoshis' },
-      fee: { $sum: '$fee' },
-      inputs: { $sum: { $subtract: [ '$satoshis', '$fee' ] } },
-      votes: { $sum: '$votes' }
-    }
+    {
+      $match:
+      {
+        satoshis: { $gt: 0 } }
     },
-    { $project:
-    { _id: 1,
-      satoshis: 1,
-      fee: 1,
-      inputs: 1,
-      votes: 1,
-      quantum: { $divide: [ '$inputs', '$votes' ] }
-    }
+    {
+      $group:
+      {
+        _id: '$surveyorId',
+        satoshis: { $sum: '$satoshis' },
+        fee: { $sum: '$fee' },
+        inputs: { $sum: { $subtract: [ '$satoshis', '$fee' ] } },
+        votes: { $sum: '$votes' }
+      }
+    },
+    {
+      $project:
+      {
+        _id: 1,
+        satoshis: 1,
+        fee: 1,
+        inputs: 1,
+        votes: 1,
+        quantum: { $divide: [ '$inputs', '$votes' ] }
+      }
     }
   ])
   votes = await voting.aggregate([
-    { $match:
-    { counts: { $gt: 0 },
-      exclude: false
-    }
+    {
+      $match:
+      {
+        counts: { $gt: 0 },
+        exclude: false
+      }
     },
-    { $group:
-    { _id: '$surveyorId',
-      counts: { $sum: '$counts' }
-    }
+    {
+      $group:
+      {
+        _id: '$surveyorId',
+        counts: { $sum: '$counts' }
+      }
     },
-    { $project:
-    { _id: 1,
-      counts: 1
-    }
+    {
+      $project:
+      {
+        _id: 1,
+        counts: 1
+      }
     }
   ])
 
@@ -172,9 +186,9 @@ var mixer = async function (debug, runtime, publisher, reportP) {
       }
       publishers[slice.publisher].satoshis += satoshis
       publishers[slice.publisher].fees += fees
-      publishers[slice.publisher].votes.push({ surveyorId: quantum.surveyorId,
-        lastUpdated: (slice.timestamp.high_ * 1000) +
-                                                              (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
+      publishers[slice.publisher].votes.push({
+        surveyorId: quantum.surveyorId,
+        lastUpdated: (slice.timestamp.high_ * 1000) + (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_),
         counts: slice.counts,
         satoshis: satoshis,
         fees: fees
@@ -239,7 +253,8 @@ var publisherContributions = function (runtime, publishers, authority, authorize
   results.forEach((result) => {
     satoshis += result.satoshis
     fees += result.fees
-    data.push({ publisher: result.publisher,
+    data.push({
+      publisher: result.publisher,
       satoshis: result.satoshis,
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
@@ -249,9 +264,7 @@ var publisherContributions = function (runtime, publishers, authority, authorize
       underscore.sortBy(result.votes, 'lastUpdated').forEach((vote) => {
         data.push(underscore.extend({ publisher: result.publisher },
                                     underscore.omit(vote, [ 'surveyorId', 'updated' ]),
-          { transactionId: vote.surveyorId,
-            lastUpdated: dateformat(vote.lastUpdated, datefmt)
-          }))
+                                    { transactionId: vote.surveyorId, lastUpdated: dateformat(vote.lastUpdated, datefmt) }))
       })
     }
   })
@@ -293,7 +306,8 @@ var publisherSettlements = function (runtime, entries, format, summaryP, usd) {
   results.forEach((result) => {
     satoshis += result.satoshis
     fees += result.fees
-    data.push({ publisher: result.publisher,
+    data.push({
+      publisher: result.publisher,
       satoshis: result.satoshis,
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
@@ -303,9 +317,7 @@ var publisherSettlements = function (runtime, entries, format, summaryP, usd) {
       result.txns.forEach((txn) => {
         data.push(underscore.extend({ publisher: result.publisher },
                                     underscore.omit(txn, [ 'hash', 'settlementId', 'created', 'modified' ]),
-          { transactionId: txn.hash,
-            lastUpdated: txn.created && dateformat(txn.created, datefmt)
-          }))
+                                    { transactionId: txn.hash, lastUpdated: txn.created && dateformat(txn.created, datefmt) }))
       })
     }
   })
@@ -355,14 +367,19 @@ exports.workers = {
 
       publishers = await mixer(debug, runtime, publisher, (format === 'json') || (typeof authorized === 'boolean'))
       previous = await settlements.aggregate([
-        { $match:
-          { satoshis: { $gt: 0 } }
+        {
+          $match:
+          {
+            satoshis: { $gt: 0 }
+          }
         },
-        { $group:
-        { _id: '$publisher',
-          satoshis: { $sum: '$satoshis' },
-          fees: { $sum: '$fees' }
-        }
+        {
+          $group:
+          {
+            _id: '$publisher',
+            satoshis: { $sum: '$satoshis' },
+            fees: { $sum: '$fees' }
+          }
         }
       ])
       previous.forEach(function (entry) {
@@ -382,12 +399,15 @@ exports.workers = {
       file = await create(runtime, 'publishers-', payload)
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot',
-          text: authority + ' report-publishers-contributions completed' })
+        return runtime.notify(debug, {
+          channel: '#publishers-bot',
+          text: authority + ' report-publishers-contributions completed'
+        })
       }
 
       if (!publisher) {
-        data.push({ publisher: 'TOTAL',
+        data.push({
+          publisher: 'TOTAL',
           satoshis: info.satoshis,
           fees: info.fees,
           'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
@@ -435,12 +455,14 @@ exports.workers = {
       file = await create(runtime, 'publishers-settlements-', payload)
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot',
+        return runtime.notify(debug, {
+          channel: '#publishers-bot',
           text: authority + ' report-publishers-settlements completed' })
       }
 
       if (!publisher) {
-        data.push({ publisher: 'TOTAL',
+        data.push({
+          publisher: 'TOTAL',
           satoshis: info.satoshis,
           fees: info.fees,
           'publisher USD': (info.satoshis * usd).toFixed(currency.digits),
@@ -521,14 +543,16 @@ exports.workers = {
         if (!summaryP) data.push([])
       })
       if (!publisher) {
-        data.push({ publisher: 'TOTAL',
+        data.push({
+          publisher: 'TOTAL',
           satoshis: data1.satoshis,
           fees: data1.fees,
           'publisher USD': (data1.satoshis * usd).toFixed(currency.digits),
           'processor USD': (data1.fees * usd).toFixed(currency.digits)
         })
         if (!summaryP) data.push([])
-        data.push({ publisher: 'TOTAL',
+        data.push({
+          publisher: 'TOTAL',
           satoshis: data2.satoshis,
           fees: data2.fees,
           'publisher USD': (data2.satoshis * usd).toFixed(currency.digits),
@@ -602,27 +626,36 @@ exports.workers = {
       }
 
       summary = await voting.aggregate([
-        { $match:
-        { satoshis: { $gt: 0 },
-          exclude: false
-        }
+        {
+          $match:
+          {
+            satoshis: { $gt: 0 },
+            exclude: false
+          }
         },
-        { $group:
-        { _id: '$publisher',
-          satoshis: { $sum: '$satoshis' }
-        }
+        {
+          $group:
+          {
+            _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
         }
       ])
       satoshis = {}
       summary.forEach(function (entry) { satoshis[entry._id] = entry.satoshis })
       summary = await settlements.aggregate([
-        { $match:
-          { satoshis: { $gt: 0 } }
+        {
+          $match:
+          {
+            satoshis: { $gt: 0 }
+          }
         },
-        { $group:
-        { _id: '$publisher',
-          satoshis: { $sum: '$satoshis' }
-        }
+        {
+          $group:
+          {
+            _id: '$publisher',
+            satoshis: { $sum: '$satoshis' }
+          }
         }
       ])
       summary.forEach(function (entry) {
@@ -693,8 +726,7 @@ exports.workers = {
       file = await create(runtime, 'publishers-status-', payload)
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot',
-          text: authority + ' report-publishers-status completed' })
+        return runtime.notify(debug, { channel: '#publishers-bot', text: authority + ' report-publishers-status completed' })
       }
 
       data = []
@@ -702,11 +734,11 @@ exports.workers = {
         if (!result.created) {
           underscore.extend(result, underscore.pick(underscore.last(result.history), [ 'created', 'modified' ]))
         }
-        data.push(underscore.extend(underscore.omit(result, [ 'history' ]),
-          { created: dateformat(result.created, datefmt),
-            modified: dateformat(result.modified, datefmt),
-            daysInQueue: daysago(result.created)
-          }))
+        data.push(underscore.extend(underscore.omit(result, [ 'history' ]), {
+          created: dateformat(result.created, datefmt),
+          modified: dateformat(result.modified, datefmt),
+          daysInQueue: daysago(result.created)
+        }))
         if (!summaryP) {
           result.history.forEach((record) => {
             if (elideP) {
@@ -760,8 +792,10 @@ exports.workers = {
       file = await create(runtime, 'surveyors-contributions-', payload)
       if (format === 'json') {
         await file.write(JSON.stringify(data, null, 2), true)
-        return runtime.notify(debug, { channel: '#publishers-bot',
-          text: authority + ' report-surveyors-contributions completed' })
+        return runtime.notify(debug, {
+          channel: '#publishers-bot',
+          text: authority + ' report-surveyors-contributions completed'
+        })
       }
 
       data.forEach((result) => {
