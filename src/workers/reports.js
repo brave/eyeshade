@@ -64,8 +64,8 @@ var hourly = async function (debug, runtime) {
   debug('hourly', 'running again ' + moment(next).fromNow())
 }
 
-var quanta = async function (debug, runtime) {
-  var i, results, votes
+var quanta = async function (debug, runtime, age) {
+  var i, match, results, votes
   var contributions = runtime.db.get('contributions', debug)
   var voting = runtime.db.get('voting', debug)
 
@@ -96,11 +96,11 @@ var quanta = async function (debug, runtime) {
     }
   }
 
+  match = { satoshis: { $gt: 0 } }
+  if (age) match.paymentStamp = { $lte: age }
   results = await contributions.aggregate([
     {
-      $match:
-      {
-        satoshis: { $gt: 0 } }
+      $match: match
     },
     {
       $group:
@@ -155,7 +155,7 @@ var quanta = async function (debug, runtime) {
   }))
 }
 
-var mixer = async function (debug, runtime, publisher, reportP) {
+var mixer = async function (debug, runtime, publisher, reportP, age) {
   var i, results
   var publishers = {}
   var publishersC = runtime.db.get('publishers', debug)
@@ -200,7 +200,7 @@ var mixer = async function (debug, runtime, publisher, reportP) {
     }
   }
 
-  results = await quanta(debug, runtime)
+  results = await quanta(debug, runtime, age)
   for (i = 0; i < results.length; i++) await slicer(results[i])
   return publishers
 }
@@ -347,6 +347,7 @@ exports.workers = {
       , authorized     :  true  | false | undefined
       , authority      : '...:...'
       , format         : 'json' | 'csv'
+      , age            : timestamp | undefined
       , publisher      : '...'
       , summary        :  true  | false
       , threshold      : satoshis
@@ -355,23 +356,23 @@ exports.workers = {
  */
   'report-publishers-contributions':
     async function (debug, runtime, payload) {
-      var data, file, info, previous, publishers, usd
+      var data, file, info, match, previous, publishers, usd
       var authority = payload.authority
       var authorized = payload.authorized
       var format = payload.format || 'csv'
+      var age = payload.age
       var publisher = payload.publisher
       var reportId = payload.reportId
       var summaryP = payload.summary
       var threshold = payload.threshold || 0
       var settlements = runtime.db.get('settlements', debug)
 
-      publishers = await mixer(debug, runtime, publisher, (format === 'json') || (typeof authorized === 'boolean'))
+      publishers = await mixer(debug, runtime, publisher, (format === 'json') || (typeof authorized === 'boolean'), age)
+      match = { satoshis: { $gt: 0 } }
+      if (age) match.paymentStamp = { $lte: new Date(age) }
       previous = await settlements.aggregate([
         {
-          $match:
-          {
-            satoshis: { $gt: 0 }
-          }
+          $match: match
         },
         {
           $group:

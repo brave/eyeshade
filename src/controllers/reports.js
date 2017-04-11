@@ -95,6 +95,8 @@ v1.publishers.contributions = {
       var amount = request.query.amount
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var currency = request.query.currency
+      var days = request.query.days
+      var age = 0
       var rate = runtime.wallet.rates[currency.toUpperCase()]
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -102,10 +104,11 @@ v1.publishers.contributions = {
       var debug = braveHapi.debug(module, request)
 
       if ((amount) && (rate)) threshold = Math.floor((amount / rate) * 1e8)
+      if (days > 0) age = underscore.now() - (days * 86400 * 1000)
 
       await runtime.queue.send(debug, 'report-publishers-contributions',
                              underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 { threshold: threshold }, request.query))
+                                                 { age: age, threshold: threshold }, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -125,7 +128,8 @@ v1.publishers.contributions = {
       summary: Joi.boolean().optional().default(true).description('summarize report'),
       authorized: Joi.boolean().optional().description('filter on authorization status'),
       amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
-      currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency')
+      currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
+      days: Joi.number().integer().min(1).optional().description('the minimal age of the contributions')
     } }
 }
 
