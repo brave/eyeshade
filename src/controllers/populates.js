@@ -12,7 +12,7 @@ var v1 = {}
  */
 
 v1.populates = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entry, i, state
       var now = underscore.now()

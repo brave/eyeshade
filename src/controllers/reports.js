@@ -14,7 +14,7 @@ var v1 = {}
  */
 
 v1.getFile = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var file, reader, writer
       var debug = braveHapi.debug(module, request)
@@ -58,7 +58,7 @@ v1.publishers = {}
  */
 
 v1.publisher.contributions = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -90,7 +90,7 @@ v1.publisher.contributions = {
 }
 
 v1.publishers.contributions = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var amount = request.query.amount
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
@@ -139,7 +139,7 @@ v1.publishers.contributions = {
  */
 
 v1.publisher.settlements = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -171,7 +171,7 @@ v1.publisher.settlements = {
 }
 
 v1.publishers.settlements = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -207,7 +207,7 @@ v1.publishers.settlements = {
  */
 
 v1.publisher.statements = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -237,7 +237,7 @@ v1.publisher.statements = {
 }
 
 v1.publishers.statements = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var hash = request.params.hash
@@ -275,7 +275,7 @@ v1.publishers.statements = {
  */
 
 v1.publishers.status = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -317,7 +317,7 @@ v1.publishers.status = {
 v1.surveyors = {}
 
 v1.surveyors.contributions = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -342,7 +342,8 @@ v1.surveyors.contributions = {
 
   validate: {
     query: {
-      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report')
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
+      summary: Joi.boolean().optional().default(true).description('summarize report')
     } },
 
   response:

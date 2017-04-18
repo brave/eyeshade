@@ -16,7 +16,7 @@ var prefix = 'brave-ledger-verification='
  */
 
 v1.settlement = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entry, i, state
       var hash = request.params.hash
@@ -67,7 +67,7 @@ v1.settlement = {
  */
 
 v1.getBalance = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var amount, entry, rate, satoshis, summary
       var publisher = request.params.publisher
@@ -152,7 +152,7 @@ v1.getBalance = {
  */
 
 v1.getStatus = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entry
       var publisher = request.params.publisher
@@ -188,7 +188,7 @@ v1.getStatus = {
  */
 
 v1.getToken = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entry, state, token
       var publisher = request.params.publisher
@@ -235,7 +235,7 @@ v1.getToken = {
  */
 
 v1.setWallet = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entry, state
       var publisher = request.params.publisher
@@ -286,7 +286,7 @@ v1.setWallet = {
  */
 
 v1.patchPublisher = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var authority, entry, state
       var publisher = request.params.publisher
@@ -352,7 +352,7 @@ v1.patchPublisher = {
  */
 
 v1.deletePublisher = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var entries
       var publisher = request.params.publisher
@@ -462,7 +462,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
 }
 
 v1.verifyToken = {
-  handler: function (runtime) {
+  handler: (runtime) => {
     return async function (request, reply) {
       var data, entry, entries, hint, i, info, j, matchP, pattern, reason, rr, rrset
       var publisher = request.params.publisher

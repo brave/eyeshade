@@ -44,7 +44,7 @@ var daily = async function (debug, runtime) {
   }
   tomorrow = new Date(now)
   tomorrow.setHours(24, 0, 0, 0)
-  setTimeout(function () { daily(debug, runtime) }, tomorrow - now)
+  setTimeout(() => { daily(debug, runtime) }, tomorrow - now)
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
 }
 
@@ -60,7 +60,7 @@ var hourly = async function (debug, runtime) {
     debug('hourly', ex)
   }
   next = now + 60 * 60 * 1000
-  setTimeout(function () { hourly(debug, runtime) }, next - now)
+  setTimeout(() => { hourly(debug, runtime) }, next - now)
   debug('hourly', 'running again ' + moment(next).fromNow())
 }
 
@@ -150,7 +150,7 @@ var quanta = async function (debug, runtime, age) {
 
   for (i = 0; i < results.length; i++) await dicer(results[i])
 
-  return (underscore.map(results, function (result) {
+  return (underscore.map(results, (result) => {
     return underscore.extend({ surveyorId: result._id }, underscore.omit(result, [ '_id' ]))
   }))
 }
@@ -205,11 +205,11 @@ var mixer = async function (debug, runtime, publisher, reportP, age) {
   return publishers
 }
 
-var publisherCompare = function (a, b) {
+var publisherCompare = (a, b) => {
   return braveHapi.domainCompare(a.publisher, b.publisher)
 }
 
-var publisherContributions = function (runtime, publishers, authority, authorized, format, reportId, summaryP, threshold, usd) {
+var publisherContributions = (runtime, publishers, authority, authorized, format, reportId, summaryP, threshold, usd) => {
   var data, fees, results, satoshis
 
   results = []
@@ -272,7 +272,7 @@ var publisherContributions = function (runtime, publishers, authority, authorize
   return { data: data, satoshis: satoshis, fees: fees }
 }
 
-var publisherSettlements = function (runtime, entries, format, summaryP, usd) {
+var publisherSettlements = (runtime, entries, format, summaryP, usd) => {
   var data, fees, results, satoshis
   var publishers = {}
 
@@ -329,8 +329,8 @@ var exports = {}
 
 exports.initialize = async function (debug, runtime) {
   if ((typeof process.env.DYNO === 'undefined') || (process.env.DYNO === 'worker.1')) {
-    setTimeout(function () { daily(debug, runtime) }, 5 * 1000)
-    setTimeout(function () { hourly(debug, runtime) }, 30 * 1000)
+    setTimeout(() => { daily(debug, runtime) }, 5 * 1000)
+    setTimeout(() => { hourly(debug, runtime) }, 30 * 1000)
   }
 }
 
@@ -383,7 +383,7 @@ exports.workers = {
           }
         }
       ])
-      previous.forEach(function (entry) {
+      previous.forEach((entry) => {
         if (typeof publishers[entry._id] === 'undefined') return
 
         publishers[entry._id].satoshis -= entry.satoshis
@@ -510,11 +510,11 @@ exports.workers = {
         entries = await settlements.find({ hash: hash })
         if (rollupP) {
           query = { $or: [] }
-          entries.forEach(function (entry) { query.$or.push({ publisher: entry.publisher }) })
+          entries.forEach((entry) => { query.$or.push({ publisher: entry.publisher }) })
           entries = await settlements.find(query)
         }
         publishers = await mixer(debug, runtime, undefined, false)
-        underscore.keys(publishers).forEach(function (publisher) {
+        underscore.keys(publishers).forEach((publisher) => {
           if (underscore.where(entries, { publisher: publisher }).length === 0) delete publishers[publisher]
         })
       }
@@ -525,7 +525,7 @@ exports.workers = {
       data = []
       data1 = { satoshis: 0, fees: 0 }
       data2 = { satoshis: 0, fees: 0 }
-      underscore.keys(publishers).sort(braveHapi.domainCompare).forEach(function (publisher) {
+      underscore.keys(publishers).sort(braveHapi.domainCompare).forEach((publisher) => {
         var entry = {}
         var info
 
@@ -643,7 +643,7 @@ exports.workers = {
         }
       ])
       satoshis = {}
-      summary.forEach(function (entry) { satoshis[entry._id] = entry.satoshis })
+      summary.forEach((entry) => { satoshis[entry._id] = entry.satoshis })
       summary = await settlements.aggregate([
         {
           $match:
@@ -659,7 +659,7 @@ exports.workers = {
           }
         }
       ])
-      summary.forEach(function (entry) {
+      summary.forEach((entry) => {
         if (typeof satoshis[entry._id] !== 'undefined') satoshis[entry._id] -= entry.satoshis
       })
       usd = runtime.wallet.rates.USD
@@ -779,32 +779,92 @@ exports.workers = {
       , reportURL      : '...'
       , authority      : '...:...'
       , format         : 'json' | 'csv'
+      , summary        :  true  | false
       }
-1    }
+    }
  */
   'report-surveyors-contributions':
     async function (debug, runtime, payload) {
-      var data, file
+      var data, fields, file, i, previous, results, slices, publishers, quantum
       var authority = payload.authority
       var format = payload.format || 'csv'
+      var summaryP = payload.summary
+      var settlements = runtime.db.get('settlements', debug)
+      var voting = runtime.db.get('voting', debug)
+
+      if (!summaryP) {
+        previous = await settlements.aggregate([
+          {
+            $match: { satoshis: { $gt: 0 } }
+          },
+          {
+            $group:
+            {
+              _id: '$publisher',
+              satoshis: { $sum: '$satoshis' },
+              fees: { $sum: '$fees' }
+            }
+          }
+        ])
+        publishers = []
+        previous.forEach((entry) => {
+          publishers[entry._id] = underscore.omit(entry, [ '_id' ])
+        })
+      }
 
       data = underscore.sortBy(await quanta(debug, runtime), 'created')
+      results = []
+      for (i = 0; i < data.length; i++) {
+        quantum = data[i]
+        results.push(quantum)
+        if (summaryP) return
+
+        slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
+        slices.forEach((slice) => {
+          var satoshis
+
+          if (publishers[slice.publisher]) {
+            satoshis = publishers[slice.publisher].satoshis
+
+            if (satoshis < slice.satoshis) slice.satoshis -= satoshis
+            else {
+              satoshis -= slice.satoshis
+              if (satoshis > 0) publishers[slice.publisher].satoshis = satoshis
+              else delete publishers[slice.publisher]
+
+              return
+            }
+          }
+
+          results.push({
+            surveyorId: slice.surveyorId,
+            satoshis: slice.satoshis,
+            publisher: slice.publisher,
+            votes: slice.counts,
+            created: new Date(parseInt(slice._id.toHexString().substring(0, 8), 16) * 1000).getTime(),
+            modified: (slice.timestamp.high_ * 1000) + (slice.timestamp.low_ / bson.Timestamp.TWO_PWR_32_DBL_)
+          })
+        })
+      }
 
       file = await create(runtime, 'surveyors-contributions-', payload)
       if (format === 'json') {
-        await file.write(JSON.stringify(data, null, 2), true)
+        await file.write(JSON.stringify(results, null, 2), true)
         return runtime.notify(debug, {
           channel: '#publishers-bot',
           text: authority + ' report-surveyors-contributions completed'
         })
       }
 
-      data.forEach((result) => {
+      results.forEach((result) => {
         underscore.extend(result,
                           { created: dateformat(result.created, datefmt), modified: dateformat(result.modified, datefmt) })
       })
 
-      try { await file.write(json2csv({ data: data }), true) } catch (ex) {
+      fields = [ 'surveyorId', 'satoshis', 'fee', 'inputs', 'quantum' ]
+      if (!summaryP) fields.push('publisher')
+      fields = fields.concat([ 'votes', 'created', 'modified' ])
+      try { await file.write(json2csv({ data: results, fields: fields }), true) } catch (ex) {
         debug('reports', { report: 'report-surveyors-contributions', reason: ex.toString() })
         file.close()
       }
