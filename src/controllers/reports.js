@@ -8,6 +8,7 @@ var url = require('url')
 var uuid = require('uuid')
 
 var v1 = {}
+var v2 = {}
 
 /*
    GET /v1/reports/file/{reportId}
@@ -51,6 +52,7 @@ v1.getFile = {
 
 v1.publisher = {}
 v1.publishers = {}
+v2.publishers = {}
 
 /*
    GET /v1/reports/publisher/{publisher}/contributions
@@ -66,8 +68,8 @@ v1.publisher.contributions = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-contributions',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.params, request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.params, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -107,8 +109,8 @@ v1.publishers.contributions = {
       if (days > 0) age = underscore.now() - (days * 86400 * 1000)
 
       await runtime.queue.send(debug, 'report-publishers-contributions',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 { age: age, threshold: threshold }, request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   { age: age, threshold: threshold }, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -147,8 +149,8 @@ v1.publisher.settlements = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-settlements',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.params, request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.params, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -179,8 +181,8 @@ v1.publishers.settlements = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-settlements',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -215,8 +217,8 @@ v1.publisher.statements = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-statements',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.params, request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.params, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -246,8 +248,8 @@ v1.publishers.statements = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-statements',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 { hash: hash }, request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   { hash: hash }, request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -272,6 +274,7 @@ v1.publishers.statements = {
 
 /*
    GET /v1/reports/publishers/status
+   GET /v2/reports/publishers/status
  */
 
 v1.publishers.status = {
@@ -283,8 +286,8 @@ v1.publishers.status = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-publishers-status',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -310,6 +313,41 @@ v1.publishers.status = {
     { schema: Joi.object().keys().unknown(true) }
 }
 
+v2.publishers.status = {
+  handler: (runtime) => {
+    return async function (request, reply) {
+      var authority = 'automation'
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
+
+      await runtime.queue.send(debug, 'report-publishers-status',
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   { elide: true }, request.query))
+      reply({ reportURL: reportURL })
+    }
+  },
+
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
+
+  description: 'Returns information about publisher status (for automation)',
+  tags: [ 'api' ],
+
+  validate: {
+    query: {
+      format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the response'),
+      summary: Joi.boolean().optional().default(true).description('summarize report'),
+      verified: Joi.boolean().optional().description('filter on verification status'),
+      access_token: Joi.string().guid().optional()
+    } },
+
+  response:
+    { schema: Joi.object().keys().unknown(true) }
+}
+
 /*
    GET /v1/reports/surveyors
  */
@@ -325,8 +363,8 @@ v1.surveyors.contributions = {
       var debug = braveHapi.debug(module, request)
 
       await runtime.queue.send(debug, 'report-surveyors-contributions',
-                             underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
-                                                 request.query))
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.query))
       reply({ reportURL: reportURL })
     }
   },
@@ -359,6 +397,7 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/statements').config(v1.publisher.statements),
   braveHapi.routes.async().path('/v1/reports/publishers/statements/{hash}').config(v1.publishers.statements),
   braveHapi.routes.async().path('/v1/reports/publishers/status').config(v1.publishers.status),
+  braveHapi.routes.async().path('/v2/reports/publishers/status').config(v2.publishers.status),
   braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
 ]
 
