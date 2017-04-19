@@ -817,7 +817,7 @@ exports.workers = {
       for (i = 0; i < data.length; i++) {
         quantum = data[i]
         results.push(quantum)
-        if (summaryP) return
+        if (summaryP) continue
 
         slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
         slices.forEach((slice) => {
