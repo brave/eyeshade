@@ -209,12 +209,15 @@ var publisherCompare = (a, b) => {
   return braveHapi.domainCompare(a.publisher, b.publisher)
 }
 
-var publisherContributions = (runtime, publishers, authority, authorized, format, reportId, summaryP, threshold, usd) => {
+var publisherContributions = (runtime, publishers, authority, authorized, verified, format, reportId, summaryP, threshold,
+                              usd) => {
   var data, fees, results, satoshis
 
   results = []
   underscore.keys(publishers).forEach((publisher) => {
     if (publishers[publisher].satoshis <= threshold) return
+
+    if ((typeof verified === 'boolean') && (publishers[publisher].verified !== verified)) return
 
     if ((typeof authorized === 'boolean') && (publishers[publisher].authorized !== authorized)) return
 
@@ -258,7 +261,9 @@ var publisherContributions = (runtime, publishers, authority, authorized, format
       satoshis: result.satoshis,
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
-      'processor USD': (result.fees * usd).toFixed(currency.digits)
+      'processor USD': (result.fees * usd).toFixed(currency.digits),
+      verified: result.verified,
+      authorized: result.authorized
     })
     if (!summaryP) {
       underscore.sortBy(result.votes, 'lastUpdated').forEach((vote) => {
@@ -351,12 +356,13 @@ exports.workers = {
       , publisher      : '...'
       , summary        :  true  | false
       , threshold      : satoshis
+      , verified       :  true  | false | undefined
       }
     }
  */
   'report-publishers-contributions':
     async function (debug, runtime, payload) {
-      var data, file, info, match, previous, publishers, usd
+      var data, entries, file, info, match, previous, publishers, usd
       var authority = payload.authority
       var authorized = payload.authorized
       var format = payload.format || 'csv'
@@ -365,9 +371,18 @@ exports.workers = {
       var reportId = payload.reportId
       var summaryP = payload.summary
       var threshold = payload.threshold || 0
+      var verified = payload.verified
       var settlements = runtime.db.get('settlements', debug)
+      var tokens = runtime.db.get('tokens', debug)
 
-      publishers = await mixer(debug, runtime, publisher, (format === 'json') || (typeof authorized === 'boolean'), age)
+      publishers = await mixer(debug, runtime, publisher, true, age)
+
+      underscore.keys(publishers).forEach((publisher) => { publishers[publisher].verified = false })
+      entries = await tokens.find({ verified: true })
+      entries.forEach((entry) => {
+        if (typeof publishers[entry.publisher] !== 'undefined') publishers[entry.publisher].verified = true
+      })
+
       match = { satoshis: { $gt: 0 } }
       if (age) match.paymentStamp = { $lte: new Date(age) }
       previous = await settlements.aggregate([
@@ -394,7 +409,8 @@ exports.workers = {
       usd = runtime.wallet.rates.USD
       usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
 
-      info = publisherContributions(runtime, publishers, authority, authorized, format, reportId, summaryP, threshold, usd)
+      info = publisherContributions(runtime, publishers, authority, authorized, verified, format, reportId, summaryP,
+                                    threshold, usd)
       data = info.data
 
       file = await create(runtime, 'publishers-', payload)
@@ -530,7 +546,8 @@ exports.workers = {
         var info
 
         entry[publisher] = publishers[publisher]
-        info = publisherContributions(runtime, entry, undefined, undefined, 'csv', undefined, summaryP, undefined, usd)
+        info = publisherContributions(runtime, entry, undefined, undefined, undefined, 'csv', undefined, summaryP, undefined,
+                                      usd)
         data = data.concat(info.data)
         data1.satoshis += info.satoshis
         data1.fees += info.fees
@@ -590,7 +607,7 @@ exports.workers = {
       var format = payload.format || 'csv'
       var elideP = payload.elide
       var summaryP = payload.summary
-      var verifiedP = payload.verified
+      var verified = payload.verified
       var publishers = runtime.db.get('publishers', debug)
       var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
@@ -620,9 +637,9 @@ exports.workers = {
         results[publisher].history.push(underscore.pick(entry,
                                                         [ 'verified', 'verificationId', 'token', 'reason', 'created', 'modified' ]))
       })
-      if (typeof verifiedP === 'boolean') {
+      if (typeof verified === 'boolean') {
         underscore.keys(results).forEach((publisher) => {
-          if (results[publisher].verified !== verifiedP) delete results[publisher]
+          if (results[publisher].verified !== verified) delete results[publisher]
         })
       }
 

@@ -129,6 +129,7 @@ v1.publishers.contributions = {
       format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
       summary: Joi.boolean().optional().default(true).description('summarize report'),
       authorized: Joi.boolean().optional().description('filter on authorization status'),
+      verified: Joi.boolean().optional().description('filter on verification status'),
       amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
       currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
       days: Joi.number().integer().min(1).optional().description('the minimal age of the contributions')
