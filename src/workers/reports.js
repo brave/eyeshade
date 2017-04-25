@@ -55,7 +55,7 @@ var hourly = async function (debug, runtime) {
   debug('hourly', 'running')
 
   try {
-    await mixer(debug, runtime, undefined, false)
+    await mixer(debug, runtime, undefined)
   } catch (ex) {
     debug('hourly', ex)
   }
@@ -155,13 +155,12 @@ var quanta = async function (debug, runtime, age) {
   }))
 }
 
-var mixer = async function (debug, runtime, publisher, reportP, age) {
+var mixer = async function (debug, runtime, publisher, age) {
   var i, results
   var publishers = {}
-  var publishersC = runtime.db.get('publishers', debug)
 
   var slicer = async function (quantum) {
-    var entry, fees, i, satoshis, slice, state
+    var fees, i, satoshis, slice, state
     var voting = runtime.db.get('voting', debug)
     var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
 
@@ -172,18 +171,7 @@ var mixer = async function (debug, runtime, publisher, reportP, age) {
       fees = Math.floor((quantum.quantum * slice.counts) - satoshis)
       if ((publisher) && (slice.publisher !== publisher)) continue
 
-      if (!publishers[slice.publisher]) {
-        publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
-
-        if (reportP) {
-          entry = await publishersC.findOne({ publisher: slice.publisher })
-          if (entry) {
-            underscore.extend(publishers[slice.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
-          } else {
-            publishers[slice.publisher].authorized = false
-          }
-        }
-      }
+      if (!publishers[slice.publisher]) publishers[slice.publisher] = { satoshis: 0, fees: 0, votes: [] }
       publishers[slice.publisher].satoshis += satoshis
       publishers[slice.publisher].fees += fees
       publishers[slice.publisher].votes.push({
@@ -224,6 +212,7 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
     publishers[publisher].votes = underscore.sortBy(publishers[publisher].votes, 'surveyorId')
     results.push(underscore.extend({ publisher: publisher }, publishers[publisher]))
   })
+
   results = results.sort(publisherCompare)
 
   if (format === 'json') {
@@ -354,6 +343,7 @@ exports.workers = {
       , format         : 'json' | 'csv'
       , age            : timestamp | undefined
       , publisher      : '...'
+      , balance        :  true  | false
       , summary        :  true  | false
       , threshold      : satoshis
       , verified       :  true  | false | undefined
@@ -367,44 +357,57 @@ exports.workers = {
       var authorized = payload.authorized
       var format = payload.format || 'csv'
       var age = payload.age
+      var balanceP = payload.balanceP
       var publisher = payload.publisher
       var reportId = payload.reportId
       var summaryP = payload.summary
       var threshold = payload.threshold || 0
       var verified = payload.verified
+      var publishersC = runtime.db.get('publishers', debug)
       var settlements = runtime.db.get('settlements', debug)
       var tokens = runtime.db.get('tokens', debug)
 
-      publishers = await mixer(debug, runtime, publisher, true, age)
+      publishers = await mixer(debug, runtime, publisher, age)
 
-      underscore.keys(publishers).forEach((publisher) => { publishers[publisher].verified = false })
+      underscore.keys(publishers).forEach((publisher) => {
+        publishers[publisher].authorized = false
+        publishers[publisher].verified = false
+      })
+      entries = await publishersC.find({ authorized: true })
+      entries.forEach((entry) => {
+        if (typeof publishers[entry.publisher] === 'undefined') return
+
+        underscore.extend(publishers[entry.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
+      })
       entries = await tokens.find({ verified: true })
       entries.forEach((entry) => {
         if (typeof publishers[entry.publisher] !== 'undefined') publishers[entry.publisher].verified = true
       })
 
-      match = { satoshis: { $gt: 0 } }
-      if (age) match.paymentStamp = { $lte: new Date(age) }
-      previous = await settlements.aggregate([
-        {
-          $match: match
-        },
-        {
-          $group:
+      if (balanceP) {
+        match = { satoshis: { $gt: 0 } }
+        if (age) match.paymentStamp = { $lte: new Date(age) }
+        previous = await settlements.aggregate([
           {
-            _id: '$publisher',
-            satoshis: { $sum: '$satoshis' },
-            fees: { $sum: '$fees' }
+            $match: match
+          },
+          {
+            $group:
+            {
+              _id: '$publisher',
+              satoshis: { $sum: '$satoshis' },
+              fees: { $sum: '$fees' }
+            }
           }
-        }
-      ])
-      previous.forEach((entry) => {
-        if (typeof publishers[entry._id] === 'undefined') return
+        ])
+        previous.forEach((entry) => {
+          if (typeof publishers[entry._id] === 'undefined') return
 
-        publishers[entry._id].satoshis -= entry.satoshis
-        publishers[entry._id].fees -= entry.fees
-        if (publishers[entry._id].fees < 0) publishers[entry._id].fees = 0
-      })
+          publishers[entry._id].satoshis -= entry.satoshis
+          publishers[entry._id].fees -= entry.fees
+          if (publishers[entry._id].fees < 0) publishers[entry._id].fees = 0
+        })
+      }
 
       usd = runtime.wallet.rates.USD
       usd = (Number.isFinite(usd)) ? (usd / 1e8) : null
@@ -521,7 +524,7 @@ exports.workers = {
 
       if (publisher) {
         entries = await settlements.find({ publisher: publisher })
-        publishers = await mixer(debug, runtime, publisher, false)
+        publishers = await mixer(debug, runtime, publisher)
       } else {
         entries = await settlements.find({ hash: hash })
         if (rollupP) {
@@ -529,7 +532,7 @@ exports.workers = {
           entries.forEach((entry) => { query.$or.push({ publisher: entry.publisher }) })
           entries = await settlements.find(query)
         }
-        publishers = await mixer(debug, runtime, undefined, false)
+        publishers = await mixer(debug, runtime, undefined)
         underscore.keys(publishers).forEach((publisher) => {
           if (underscore.where(entries, { publisher: publisher }).length === 0) delete publishers[publisher]
         })

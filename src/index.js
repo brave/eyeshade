@@ -127,7 +127,6 @@ server.register(
   server.auth.strategy('simple', 'bearer-access-token', {
     allowQueryToken: true,
     allowMultipleHeaders: false,
-    allowTokenName: 'access_token',
     validateFunc: function (token, callback) {
       var tokenlist = process.env.TOKEN_LIST && process.env.TOKEN_LIST.split(',')
 
@@ -163,8 +162,8 @@ server.ext('onPreResponse', function (request, reply) {
     return reply.continue()
   }
 
-  if (request && request.auth && request.auth.session && request.auth.session.clear) {
-    request.auth.session.clear()
+  if (request && request.auth && request.cookieAuth && request.cookieAuth.clear) {
+    request.cookieAuth.clear()
     reply.redirect('/v1/login')
   }
 })
@@ -177,8 +176,8 @@ server.on('log', function (event, tags) {
   var flattened
   var logger = request._logger || []
   var params = {
-    request:
-    { id: request.id,
+    request: {
+      id: request.id,
       method: request.method.toUpperCase(),
       pathname: request.url.pathname,
       statusCode: request.response.statusCode
