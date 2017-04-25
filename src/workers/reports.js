@@ -252,6 +252,7 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
       'processor USD': (result.fees * usd).toFixed(currency.digits),
       verified: result.verified,
+      address: result.address ? 'yes' : 'no',
       authorized: result.authorized
     })
     if (!summaryP) {
