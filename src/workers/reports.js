@@ -243,18 +243,22 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
 
   data = []
   results.forEach((result) => {
+    var datum
+
     satoshis += result.satoshis
     fees += result.fees
-    data.push({
+    datum = {
       publisher: result.publisher,
       satoshis: result.satoshis,
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
-      'processor USD': (result.fees * usd).toFixed(currency.digits),
-      verified: result.verified,
-      address: result.address ? 'yes' : 'no',
-      authorized: result.authorized
-    })
+      'processor USD': (result.fees * usd).toFixed(currency.digits)
+    }
+    if (authority) {
+      underscore.extend(datum,
+                        { verified: result.verified, address: result.address ? 'yes' : 'no', authorized: result.authorized })
+    }
+    data.push(datum)
     if (!summaryP) {
       underscore.sortBy(result.votes, 'lastUpdated').forEach((vote) => {
         data.push(underscore.extend({ publisher: result.publisher },
