@@ -28,6 +28,12 @@ server.connection({ port: process.env.PORT })
 
 debug.initialize({ web: { id: server.info.id } })
 
+if (process.env.NODE_ENV !== 'production') {
+  process.on('warning', (warning) => {
+    debug('warning', underscore.pick(warning, [ 'name', 'message', 'stack' ]))
+  })
+}
+
 server.register(
   [ require('bell'),
     require('blipp'),
