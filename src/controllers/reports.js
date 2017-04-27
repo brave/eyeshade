@@ -405,6 +405,7 @@ module.exports.routes = [
 
 module.exports.initialize = async function (debug, runtime) {
   await runtime.queue.create('report-publishers-contributions')
+  await runtime.queue.create('report-publishers-settlements')
   await runtime.queue.create('report-publishers-status')
   await runtime.queue.create('report-surveyors-contributions')
 }

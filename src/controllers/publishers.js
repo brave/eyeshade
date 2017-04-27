@@ -7,9 +7,119 @@ var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
 var underscore = require('underscore')
+var url = require('url')
+var uuid = require('uuid')
 
 var v1 = {}
 var prefix = 'brave-ledger-verification='
+
+/*
+   POST /v1/publishers/contributions/exclude
+ */
+
+v1.exclude = {
+  handler: (runtime) => {
+    return async function (request, reply) {
+      var entries
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var payload = request.payload
+      var exclusionId = payload.exclusionId
+      var debug = braveHapi.debug(module, request)
+      var voting = runtime.db.get('voting', debug)
+
+      if (payload.exclude) {
+        if (exclusionId) return reply(boom.badData('both exclude=true and exclusionId may not be specified'))
+      } else {
+        if (!exclusionId) return reply(boom.badData('exclusionId must be specified when exclude=false'))
+
+        entries = await voting.find({ exclude: true, exclusionId: exclusionId })
+        if (entries.length === 0) return reply(boom.notFound('no matching entries: ' + exclusionId))
+
+        // NB: theoretically no relationship between exclusionId/hash, but we enforce unanimity
+        entries = await voting.find({ hash: { $exists: true }, exclusionId: exclusionId })
+        if (entries.length !== 0) return reply(boom.badData('exclusionId is settled: ' + entries[0].hash))
+      }
+
+      await runtime.queue.send(debug, 'publishers-contributions-exclude',
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.payload))
+      reply({ reportURL: reportURL })
+    }
+  },
+
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
+
+  description: 'Sets the exclude option for non-verified publishers',
+  tags: [ 'api' ],
+
+  validate: {
+    payload: {
+      exclude: Joi.boolean().optional().default(true).description('exclude contributions for non-verified publishers'),
+      exclusionId: Joi.string().guid().optional().description('the exclusionId')
+    }
+  },
+
+  response:
+    { schema: Joi.object().keys().unknown(true) }
+}
+
+/*
+   PUT /v1/publishers/contributions/exclude/{exclusionId}
+ */
+
+v1.exclusion = {
+  handler: (runtime) => {
+    return async function (request, reply) {
+      var entries
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      var exclusionId = request.params.exclusionId
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
+      var voting = runtime.db.get('voting', debug)
+
+      entries = await voting.find({ exclude: true, exclusionId: exclusionId })
+      if (entries.length === 0) return reply(boom.notFound('no such entry: ' + exclusionId))
+
+      // cf;, unanimity comment above
+      entries = await voting.find({ hash: { $exists: true }, exclusionId: exclusionId })
+      if (entries.length !== 0) return reply(boom.badData('exclusionId is settled: ' + entries[0].hash))
+
+      await runtime.queue.send(debug, 'publishers-contributions-prorata',
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.params, { settlement: request.payload }))
+      reply({ reportURL: reportURL })
+    }
+  },
+
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
+
+  description: 'Sets the exclude option for non-verified publishers',
+  tags: [ 'api' ],
+
+  validate: {
+    params: { exclusionId: Joi.string().guid().required().description('the exclusionId') },
+    payload: Joi.array().min(1).items(Joi.object().keys({
+      publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+      address: braveJoi.string().base58().required().description('BTC address'),
+      satoshis: Joi.number().integer().min(1).required().description('the settlement in satoshis'),
+      transactionId: Joi.string().guid().description('the transactionId')
+    }).unknown(true)).required().description('publisher settlement report')
+  },
+
+  response:
+    { schema: Joi.object().keys().unknown(true) }
+}
 
 /*
    POST /v1/publishers/settlement/{hash}
@@ -19,14 +129,19 @@ v1.settlement = {
   handler: (runtime) => {
     return async function (request, reply) {
       var entry, i, state
+      var exclusionId = request.query.exclusionId
       var hash = request.params.hash
       var payload = request.payload
       var debug = braveHapi.debug(module, request)
       var settlements = runtime.db.get('settlements', debug)
+      var voting = runtime.db.get('voting', debug)
+
+      state = { $set: { hash: hash } }
+      await voting.update({ exclusionId: exclusionId }, state, { upsert: false, multi: true })
 
       state = {
         $currentDate: { timestamp: { $type: 'timestamp' } },
-        $set: { hash: hash }
+        $set: { hash: hash, exclusionId: exclusionId }
       }
       for (i = 0; i < payload.length; i++) {
         entry = payload[i]
@@ -50,6 +165,7 @@ v1.settlement = {
 
   validate: {
     params: { hash: Joi.string().hex().required().description('transaction hash') },
+    query: { exclusionId: Joi.string().guid().optional().description('the exclusionId') },
     payload: Joi.array().min(1).items(Joi.object().keys({
       publisher: braveJoi.string().publisher().required().description('the publisher identity'),
       address: braveJoi.string().base58().required().description('BTC address'),
@@ -600,6 +716,8 @@ var notify = async function (debug, runtime, publisher, payload) {
 }
 
 module.exports.routes = [
+  braveHapi.routes.async().post().path('/v1/publishers/contributions/exclude').config(v1.exclude),
+  braveHapi.routes.async().put().path('/v1/publishers/contributions/exclude/{exclusionId}').config(v1.exclusion),
   braveHapi.routes.async().post().path('/v1/publishers/settlement/{hash}').config(v1.settlement),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),
@@ -648,8 +766,9 @@ module.exports.initialize = async function (debug, runtime) {
     }
   ])
 
-  await runtime.queue.create('prune-publishers')
   await runtime.queue.create('publisher-report')
+  await runtime.queue.create('publishers-contributions-exclude')
+  await runtime.queue.create('publishers-contributions-prorata')
 
   resolvers = underscore.uniq([ '8.8.8.8', '8.8.4.4' ].concat(dns.getServers()))
   debug('publishers', { resolvers: resolvers })
