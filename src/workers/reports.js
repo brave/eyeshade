@@ -718,18 +718,19 @@ exports.workers = {
           datum = underscore.findWhere(result, { id: results[publisher].verificationId })
           if (datum) {
             underscore.extend(results[publisher], underscore.pick(datum, [ 'name', 'email' ]),
-                              { phone: datum.phone_normalized })
+                              { phone: datum.phone_normalized, showVerification: datum.show_verification_status })
           }
 
           results[publisher].history.forEach((record) => {
             datum2 = underscore.findWhere(result, { id: record.verificationId })
             if (datum2) {
-              underscore.extend(record, underscore.pick(datum2, [ 'name', 'email' ]), { phone: datum2.phone_normalized })
+              underscore.extend(record, underscore.pick(datum2, [ 'name', 'email' ]),
+                                { phone: datum2.phone_normalized, showVerification: datum2.show_verification_status })
             }
           })
           if ((!datum) && (datum2)) {
             underscore.extend(results[publisher], underscore.pick(datum2, [ 'name', 'email' ]),
-                              { phone: datum2.phone_normalized })
+                              { phone: datum2.phone_normalized, showVerification: datum2.show_verification_status })
           }
         } catch (ex) { debug('publisher', { publisher: publisher, reason: ex.toString() }) }
 
@@ -785,7 +786,7 @@ exports.workers = {
 
       fields = [ 'publisher', 'USD', 'satoshis',
         'verified', 'authorized', 'authority',
-        'name', 'email', 'phone', 'address',
+        'name', 'email', 'phone', 'address', 'showVerificationStatus',
         'verificationId', 'reason',
         'daysInQueue', 'created', 'modified',
         'token', 'legalFormURL' ]
