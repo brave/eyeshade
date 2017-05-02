@@ -57,6 +57,7 @@ exports.workers = {
       var file, reportURL, result, state, wallet
       var address = payload.address
       var satoshis = payload.satoshis
+      var transactionId = payload.transactionId
       var now = underscore.now()
       var reportId = uuid.v4().toLowerCase()
       var populates = runtime.db.get('populates', debug)
@@ -67,14 +68,20 @@ exports.workers = {
 
       if (runtime.wallet.transferP(wallet)) {
         try {
+          payload.fiatFee = payload.fee
           result = await runtime.wallet.transfer(wallet, satoshis)
           state = {
             $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: underscore.defaults(result, { holdUntil: new Date(now + oneHundredTwentyFourDays) }, payload)
+            $set: underscore.defaults(underscore.pick(result, [ 'hash', 'fee' ]),
+                                      { holdUntil: new Date(now + oneHundredTwentyFourDays) },
+                                      underscore.omit(payload, [ 'transactionId' ]))
           }
-          await populates.update(state, { upsert: true })
+          await populates.update({ transactionId: transactionId }, state, { upsert: true })
 
-          return runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(payload) })
+          return runtime.notify(debug, {
+            channel: '#funding-bot',
+            text: JSON.stringify(underscore.defaults(underscore.omit(result, [ 'tx' ]), payload))
+          })
         } catch (ex) {
           runtime.notify(debug, { channel: '#funding-bot', text: ex.toString() })
         }
