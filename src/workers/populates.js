@@ -89,7 +89,10 @@ exports.workers = {
             trackingURL: 'https://blockchain.info/tx/' + result.hash
           })
           notify(debug, runtime, address, 'purchase_completed', entry)
-          return runtime.notify(debug, { channel: '#funding-bot', text: 'purchase completed: ' + JSON.stringify(entry) })
+          return runtime.notify(debug, {
+            channel: '#funding-bot',
+            text: 'purchase completed: ' + JSON.stringify(underscore.extend(entry, underscore.pick(result, [ 'remaining' ])))
+          })
         } catch (ex) {
           runtime.notify(debug, { text: 'populates error: ' + ex.toString() })
           debug('populates', ex)
@@ -158,14 +161,13 @@ var notify = async function (debug, runtime, address, type, payload) {
     if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
     debug('debug', { address: address, reason: result })
   } catch (ex) {
-    debug('debug', { address: address, reason: ex.toString() })
+    debug('debug', 'notify error: ' + JSON.stringify({ address: address, reason: ex.toString() }))
   }
 
   if (!result) return
 
   result = underscore.extend({ address: address }, payload)
   debug('notify', result)
-  runtime.notify(debug, { channel: '#funding-bot', text: 'consumer notified: ' + JSON.stringify(result) })
 }
 exports.notify = notify
 
