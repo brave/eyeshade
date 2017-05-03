@@ -111,6 +111,7 @@ exports.workers = {
 var notify = async function (debug, runtime, address, type, payload) {
   var result
 
+  debug('debug', { address: address, type: type, payload: payload })
   try {
     result = await braveHapi.wreck.post(runtime.config.funding.url + '/v1/notifications/' + encodeURIComponent(address) +
                                         '?type=' + type,
@@ -120,9 +121,9 @@ var notify = async function (debug, runtime, address, type, payload) {
         useProxyP: true
       })
     if (Buffer.isBuffer(result)) try { result = JSON.parse(result) } catch (ex) { result = result.toString() }
-    debug('publishers', { address: address, reason: result })
+    debug('debug', { address: address, reason: result })
   } catch (ex) {
-    debug('publishers', { address: address, reason: ex.toString() })
+    debug('debug', { address: address, reason: ex.toString() })
   }
 
   if (!result) return
