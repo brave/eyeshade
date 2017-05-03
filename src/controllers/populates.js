@@ -28,8 +28,8 @@ v1.populates = {
       for (i = 0; i < payload.length; i++) {
         entry = payload[i]
 
-        underscore.extend(state.$set, underscore.pick(entry, [ 'address', 'satoshis' ]), { holdSatoshis: entry.satoshis })
-        await populates.update({ transactionId: entry.transactionId }, state, { upsert: true })
+        underscore.extend(state.$set, underscore.pick(entry, [ 'satoshis' ]), { holdSatoshis: entry.satoshis })
+        await populates.update({ address: entry.address, transactionId: entry.transactionId }, state, { upsert: true })
 
         entry.subject = 'Brave Payments Transaction Confirmation'
         entry.trackingURL = 'https://blockchain.info/tx/' + hash
@@ -78,6 +78,8 @@ module.exports.initialize = async function (debug, runtime) {
         paymentId: '',
         address: '',
         actor: '',
+        status: '',
+        eventId: '',
         amount: '',
         fiatFee: '',
         currency: '',
@@ -88,8 +90,9 @@ module.exports.initialize = async function (debug, runtime) {
         timestamp: bson.Timestamp.ZERO
       },
       unique: [ { transactionId: 1 } ],
-      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { amount: 1 }, { fiatFee: 1 }, { currency: 1 },
-                { satoshis: 1 }, { fee: 1 }, { holdUntil: 1 }, { holdSatoshis: 1 }, { timestamp: 1 } ]
+      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { status: 1 }, { eventId: 1 }, { amount: 1 },
+                { fiatFee: 1 }, { currency: 1 }, { satoshis: 1 }, { fee: 1 }, { holdUntil: 1 }, { holdSatoshis: 1 },
+                { timestamp: 1 } ]
     }
   ])
 }

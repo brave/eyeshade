@@ -14,7 +14,7 @@ exports.workers = async function (debug, runtime) {
     runtime.queue.listen(name,
       runtime.newrelic.createBackgroundTransaction(name, async function (err, debug, payload) {
         if (err) {
-          runtime.notify(debug, { text: name + ' listen: ' + err.toString() })
+          runtime.notify(debug, { text: name + ' listen error: ' + err.toString() })
           return debug(name + ' listen', err)
         }
 

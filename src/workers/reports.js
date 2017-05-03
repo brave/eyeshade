@@ -40,7 +40,7 @@ var daily = async function (debug, runtime) {
   try {
     await runtime.db.purgeSince(debug, runtime, midnight * 1000)
   } catch (ex) {
-    runtime.notify(debug, { text: 'daily: ' + ex.toString() })
+    runtime.notify(debug, { text: 'daily error: ' + ex.toString() })
     debug('daily', ex)
   }
   tomorrow = new Date(now)
@@ -58,7 +58,7 @@ var hourly = async function (debug, runtime) {
   try {
     await mixer(debug, runtime, undefined)
   } catch (ex) {
-    runtime.notify(debug, { text: 'hourly: ' + ex.toString() })
+    runtime.notify(debug, { text: 'hourly error: ' + ex.toString() })
     debug('hourly', ex)
   }
   next = now + 60 * 60 * 1000

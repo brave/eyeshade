@@ -22,6 +22,8 @@ exports.initialize = async function (debug, runtime) {
         paymentId: '',
         address: '',
         actor: '',
+        status: '',
+        eventId: '',
         amount: '',
         fiatFee: '',
         currency: '',
@@ -32,14 +34,15 @@ exports.initialize = async function (debug, runtime) {
         timestamp: bson.Timestamp.ZERO
       },
       unique: [ { transactionId: 1 } ],
-      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { amount: 1 }, { fiatFee: 1 }, { currency: 1 },
-                { satoshis: 1 }, { fee: 1 }, { holdUntil: 1 }, { holdSatoshis: 1 }, { timestamp: 1 } ]
+      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { status: 1 }, { eventId: 1 }, { amount: 1 },
+                { fiatFee: 1 }, { currency: 1 }, { satoshis: 1 }, { fee: 1 }, { holdUntil: 1 }, { holdSatoshis: 1 },
+                { timestamp: 1 } ]
     }
   ])
 }
 
 exports.workers = {
-/* sent by ledger PUT /v1/address/{personaId}/validate
+/* sent by ledger PUT /v1/address/{address}/validate
 
     { queue            : 'population-report'
     , message          :
@@ -79,7 +82,7 @@ exports.workers = {
               holdSatoshis: payload.satoshis
             }, underscore.omit(payload, [ 'transactionId' ]))
           }
-          await populates.update({ transactionId: transactionId }, state, { upsert: true })
+          await populates.update({ address: address, transactionId: transactionId }, state, { upsert: true })
 
           entry = underscore.extend(underscore.omit(payload, [ 'address' ]), {
             subject: 'Brave Payments Transaction Confirmation',
@@ -93,7 +96,8 @@ exports.workers = {
             text: JSON.stringify(underscore.defaults(underscore.omit(result, [ 'tx' ]), payload))
           })
         } catch (ex) {
-          runtime.notify(debug, { channel: '#funding-bot', text: ex.toString() })
+          runtime.notify(debug, { text: 'populates error: ' + ex.toString() })
+          debug('populates', ex)
         }
       } else {
         runtime.notify(debug, { channel: '#funding-bot', text: 'not configured for automatic funding' })
@@ -105,13 +109,49 @@ exports.workers = {
 
       reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
       runtime.notify(debug, { channel: '#funding-bot', text: reportURL })
+    },
+
+/* sent by ledger PATCH /v1/address/{address}/{transactionId}
+
+    { queue            : 'population-update'
+    , message          :
+      { paymentId      : '...'
+      , address        : '...'
+      , transactionId  : '...'
+      , status         : 'failed' | 'refunded' | 'disputed' | 'closed'
+      , actor          : 'authorize.stripe'
+      , eventId        : '...'
+      }
+    }
+ */
+  'population-update':
+    async function (debug, runtime, payload) {
+      var entry, state
+      var address = payload.address
+      var eventId = payload.eventId
+      var status = payload.status
+      var transactionId = payload.transactionId
+      var populates = runtime.db.get('populates', debug)
+
+      entry = await populates.findOne({ address: address, transactionId: transactionId })
+      if (!entry) {
+        runtime.notify(debug, { text: 'no such transaction: ' + JSON.stringify(payload) })
+        return debug('population', payload)
+      }
+
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { status: status, eventId: eventId }
+      }
+      await populates.update({ address: address, transactionId: transactionId }, state, { upsert: true })
+
+      runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(underscore.defaults(payload, entry)) })
     }
 }
 
 var notify = async function (debug, runtime, address, type, payload) {
   var result
 
-  debug('debug', { address: address, type: type, payload: payload })
   try {
     result = await braveHapi.wreck.post(runtime.config.funding.url + '/v1/notifications/' + encodeURIComponent(address) +
                                         '?type=' + type,
