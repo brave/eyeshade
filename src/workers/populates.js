@@ -23,15 +23,17 @@ exports.initialize = async function (debug, runtime) {
         address: '',
         actor: '',
         amount: '',
-        fee: '',
+        fiatFee: '',
         currency: '',
         satoshis: 0,
+        fee: 0,
         holdUntil: bson.Timestamp.ZERO,
+        holdSatoshis: 0,
         timestamp: bson.Timestamp.ZERO
       },
       unique: [ { transactionId: 1 } ],
-      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { amount: 1 }, { fee: 1 }, { currency: 1 },
-                { satoshis: 1 }, { holdUntil: 1 }, { timestamp: 1 } ]
+      others: [ { hash: 1 }, { paymentId: 1 }, { address: 1 }, { actor: 1 }, { amount: 1 }, { fiatFee: 1 }, { currency: 1 },
+                { satoshis: 1 }, { fee: 1 }, { holdUntil: 1 }, { holdSatoshis: 1 }, { timestamp: 1 } ]
     }
   ])
 }
@@ -54,7 +56,7 @@ exports.workers = {
  */
   'population-report':
     async function (debug, runtime, payload) {
-      var file, reportURL, result, state, wallet
+      var entry, file, reportURL, result, state, wallet
       var address = payload.address
       var satoshis = payload.satoshis
       var transactionId = payload.transactionId
@@ -72,11 +74,19 @@ exports.workers = {
           result = await runtime.wallet.transfer(wallet, satoshis)
           state = {
             $currentDate: { timestamp: { $type: 'timestamp' } },
-            $set: underscore.defaults(underscore.pick(result, [ 'hash', 'fee' ]),
-                                      { holdUntil: new Date(now + oneHundredTwentyFourDays) },
-                                      underscore.omit(payload, [ 'transactionId' ]))
+            $set: underscore.defaults(underscore.pick(result, [ 'hash', 'fee' ]), {
+              holdUntil: new Date(now + oneHundredTwentyFourDays),
+              holdSatoshis: payload.satoshis
+            }, underscore.omit(payload, [ 'transactionId' ]))
           }
           await populates.update({ transactionId: transactionId }, state, { upsert: true })
+
+          entry = underscore.extend(underscore.omit(payload, [ 'address' ]), {
+            subject: 'Brave Payments Transaction Confirmation',
+            trackingURL: 'https://blockchain.info/tx/' + result.hash
+          })
+          notify(debug, runtime, address, 'purchase_completed', entry)
+          runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(entry) })
 
           return runtime.notify(debug, {
             channel: '#funding-bot',
