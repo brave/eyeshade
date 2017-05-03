@@ -117,7 +117,7 @@ exports.workers = {
       , address        : '...'
       , transactionId  : '...'
       , status         : 'failed' | 'refunded' | 'disputed' | 'closed'
-      , actor          : 'authorize.stripe'
+      , actor          : 'webhook.stripe'
       , eventId        : '...'
       }
     }
