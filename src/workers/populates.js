@@ -143,7 +143,10 @@ exports.workers = {
       }
       await populates.update({ address: address, transactionId: transactionId }, state, { upsert: true })
 
-      runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(underscore.defaults(payload, entry)) })
+      runtime.notify(debug, {
+        channel: '#funding-bot',
+        text: 'purchase ' + status + ':' + JSON.stringify(underscore.defaults(payload, entry))
+      })
     }
 }
 
