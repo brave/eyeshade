@@ -89,12 +89,7 @@ exports.workers = {
             trackingURL: 'https://blockchain.info/tx/' + result.hash
           })
           notify(debug, runtime, address, 'purchase_completed', entry)
-          runtime.notify(debug, { channel: '#funding-bot', text: JSON.stringify(entry) })
-
-          return runtime.notify(debug, {
-            channel: '#funding-bot',
-            text: JSON.stringify(underscore.defaults(underscore.omit(result, [ 'tx' ]), payload))
-          })
+          return runtime.notify(debug, { channel: '#funding-bot', text: 'purchase completed: ' + JSON.stringify(entry) })
         } catch (ex) {
           runtime.notify(debug, { text: 'populates error: ' + ex.toString() })
           debug('populates', ex)
