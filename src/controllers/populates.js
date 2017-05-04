@@ -59,7 +59,7 @@ v1.populates = {
   },
 
   response:
-    { schema: Joi.object().keys().unknown(true) }
+    { schema: Joi.object().length(0) }
 }
 
 module.exports.routes = [

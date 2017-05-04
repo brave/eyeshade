@@ -65,8 +65,11 @@ v1.exclude = {
     }
   },
 
-  response:
-    { schema: Joi.object().keys().unknown(true) }
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 /*
@@ -117,8 +120,11 @@ v1.exclusion = {
     }).unknown(true)).required().description('publisher settlement report')
   },
 
-  response:
-    { schema: Joi.object().keys().unknown(true) }
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 /*
@@ -175,7 +181,7 @@ v1.settlement = {
   },
 
   response:
-    { schema: Joi.object().keys().unknown(true) }
+    { schema: Joi.object().length(0) }
 }
 
 /*
@@ -295,8 +301,12 @@ v1.getStatus = {
     query: { access_token: Joi.string().guid().optional() }
   },
 
-  response:
-    { schema: Joi.object().keys().unknown(true).description('the publisher status') }
+  response: {
+    schema: Joi.object().keys({
+      address: braveJoi.string().base58().optional().description('BTC address'),
+      authorized: Joi.boolean().optional().description('authorized for settlements')
+    }).unknown(true).description('the publisher status')
+  }
 }
 
 /*

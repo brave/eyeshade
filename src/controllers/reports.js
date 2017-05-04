@@ -88,7 +88,14 @@ v1.publisher.contributions = {
     query: {
       format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
       summary: Joi.boolean().optional().default(true).description('summarize report')
-    } }
+    }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 v1.publishers.contributions = {
@@ -134,7 +141,14 @@ v1.publishers.contributions = {
       amount: Joi.number().integer().min(0).optional().description('the minimum amount in fiat currency'),
       currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
       days: Joi.number().integer().min(1).optional().description('the minimal age of the contributions')
-    } }
+    }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 /*
@@ -171,7 +185,14 @@ v1.publisher.settlements = {
     query: {
       format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
       summary: Joi.boolean().optional().default(true).description('summarize report')
-    } }
+    }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 v1.publishers.settlements = {
@@ -202,7 +223,14 @@ v1.publishers.settlements = {
     query: {
       format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
       summary: Joi.boolean().optional().default(true).description('summarize report')
-    } }
+    }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 /*
@@ -237,6 +265,12 @@ v1.publisher.statements = {
   validate: {
     params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
     query: { summary: Joi.boolean().optional().default(true).description('summarize report') }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
   }
 }
 
@@ -271,6 +305,12 @@ v1.publishers.statements = {
       rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
       summary: Joi.boolean().optional().default(true).description('summarize report')
     }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
   }
 }
 
@@ -309,10 +349,14 @@ v1.publishers.status = {
       elide: Joi.boolean().optional().default(true).description('elide contact information'),
       summary: Joi.boolean().optional().default(true).description('summarize report'),
       verified: Joi.boolean().optional().description('filter on verification status')
-    } },
+    }
+  },
 
-  response:
-    { schema: Joi.object().keys().unknown(true) }
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 v2.publishers.status = {
@@ -344,14 +388,18 @@ v2.publishers.status = {
       summary: Joi.boolean().optional().default(true).description('summarize report'),
       verified: Joi.boolean().optional().description('filter on verification status'),
       access_token: Joi.string().guid().optional()
-    } },
+    }
+  },
 
-  response:
-    { schema: Joi.object().keys().unknown(true) }
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 /*
-   GET /v1/reports/surveyors
+   GET /v1/reports/surveyors/contributions
  */
 
 v1.surveyors = {}
@@ -384,10 +432,14 @@ v1.surveyors.contributions = {
     query: {
       format: Joi.string().valid('json', 'csv').optional().default('csv').description('the format of the report'),
       summary: Joi.boolean().optional().default(true).description('summarize report')
-    } },
+    }
+  },
 
-  response:
-    { schema: Joi.object().keys().unknown(true) }
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+    }).unknown(true)
+  }
 }
 
 module.exports.routes = [
