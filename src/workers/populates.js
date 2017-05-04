@@ -1,3 +1,18 @@
+/*
+1. when contribution document is entered
+  - find newest populates document with same paymentId and a holdSatoshis >= satoshis
+  - populates.holdSatoshis -= satoshis
+  - contribution.populatesId = populates.transactionId
+
+2. do not collate any contribution with a non-empty populatesId
+
+3. regularly search for populates documents where holdUntil is in the past:
+     remove populatesId from any contribution where contribution.populatesId = populates.transactionId
+     populates.holdSatoshis = 0
+
+4. populates.
+ */
+
 var braveHapi = require('../brave-hapi')
 var bson = require('bson')
 var create = require('./reports').create
@@ -139,7 +154,7 @@ exports.workers = {
 
       state = {
         $currentDate: { timestamp: { $type: 'timestamp' } },
-        $set: { status: status, eventId: eventId }
+        $set: { status: status, eventId: eventId, holdSatoshis: 0 }
       }
       await populates.update({ address: address, transactionId: transactionId }, state, { upsert: true })
 
@@ -173,5 +188,23 @@ var notify = async function (debug, runtime, address, type, payload) {
   debug('notify', result)
 }
 exports.notify = notify
+
+var holdover = async function (debug, runtime, paymentId, satoshis) {
+  var entry
+  var populates = runtime.db.get('populates', debug)
+
+  entry = await populates.findOneAndUpdate({
+    $and: [
+      { paymentId: paymentId },
+      { holdSatoshis: { $exists: true, $ge: satoshis } }
+    ]
+  }, {
+    $currentDate: { timestamp: { $type: 'timestamp' } },
+    $inc: { holdSatoshis: -satoshis }
+  }, { sort: { $_id: -1 }, upsert: false })
+
+  if (entry) return entry.transactionId
+}
+exports.holdover = holdover
 
 module.exports = exports
