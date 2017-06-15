@@ -13,7 +13,7 @@ var v1 = {}
 
 v1.populates = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entry, i, state
       var now = underscore.now()
       var hash = request.params.hash
@@ -66,7 +66,7 @@ module.exports.routes = [
   braveHapi.routes.async().post().path('/v1/populates/{hash}').config(v1.populates)
 ]
 
-module.exports.initialize = async function (debug, runtime) {
+module.exports.initialize = async (debug, runtime) => {
   runtime.db.checkIndices(debug, [
     {
       category: runtime.db.get('populates', debug),

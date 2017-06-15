@@ -16,7 +16,7 @@ var v2 = {}
 
 v1.getFile = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var file, reader, writer
       var debug = braveHapi.debug(module, request)
       var reportId = request.params.reportId
@@ -61,7 +61,7 @@ v2.publishers = {}
 
 v1.publisher.contributions = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -100,7 +100,7 @@ v1.publisher.contributions = {
 
 v1.publishers.contributions = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var amount = request.query.amount
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var currency = request.query.currency
@@ -158,7 +158,7 @@ v1.publishers.contributions = {
 
 v1.publisher.settlements = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -197,7 +197,7 @@ v1.publisher.settlements = {
 
 v1.publishers.settlements = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -240,7 +240,7 @@ v1.publishers.settlements = {
 
 v1.publisher.statements = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -276,7 +276,7 @@ v1.publisher.statements = {
 
 v1.publishers.statements = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var hash = request.params.hash
       var reportId = uuid.v4().toLowerCase()
@@ -303,7 +303,7 @@ v1.publishers.statements = {
     params: { hash: Joi.string().hex().required().description('transaction hash') },
     query: {
       rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
-      summary: Joi.boolean().optional().default(true).description('summarize report')
+      summary: Joi.boolean().optional().default(false).description('summarize report')
     }
   },
 
@@ -321,7 +321,7 @@ v1.publishers.statements = {
 
 v1.publishers.status = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -361,7 +361,7 @@ v1.publishers.status = {
 
 v2.publishers.status = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = 'automation'
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -406,7 +406,7 @@ v1.surveyors = {}
 
 v1.surveyors.contributions = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
       var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
@@ -455,7 +455,7 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
 ]
 
-module.exports.initialize = async function (debug, runtime) {
+module.exports.initialize = async (debug, runtime) => {
   await runtime.queue.create('report-publishers-contributions')
   await runtime.queue.create('report-publishers-settlements')
   await runtime.queue.create('report-publishers-status')

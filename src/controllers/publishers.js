@@ -19,7 +19,7 @@ var prefix = 'brave-ledger-verification='
 
 v1.exclude = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entries
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var reportId = uuid.v4().toLowerCase()
@@ -78,7 +78,7 @@ v1.exclude = {
 
 v1.exclusion = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entries
       var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
       var exclusionId = request.params.exclusionId
@@ -133,7 +133,7 @@ v1.exclusion = {
 
 v1.settlement = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entry, i, state
       var exclusionId = request.query.exclusionId
       var hash = request.params.hash
@@ -190,7 +190,7 @@ v1.settlement = {
 
 v1.getBalance = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var amount, entry, rate, satoshis, summary
       var publisher = request.params.publisher
       var currency = request.query.currency
@@ -275,7 +275,7 @@ v1.getBalance = {
 
 v1.getStatus = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entry
       var publisher = request.params.publisher
       var debug = braveHapi.debug(module, request)
@@ -315,7 +315,7 @@ v1.getStatus = {
 
 v1.getToken = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entry, state, token
       var publisher = request.params.publisher
       var verificationId = request.params.verificationId
@@ -362,7 +362,7 @@ v1.getToken = {
 
 v1.setWallet = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entry, state
       var publisher = request.params.publisher
       var bitcoinAddress = request.payload.bitcoinAddress
@@ -413,7 +413,7 @@ v1.setWallet = {
 
 v1.patchPublisher = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var authority, entry, state
       var publisher = request.params.publisher
       var payload = request.payload
@@ -479,7 +479,7 @@ v1.patchPublisher = {
 
 v1.deletePublisher = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var entries
       var publisher = request.params.publisher
       var debug = braveHapi.debug(module, request)
@@ -524,7 +524,7 @@ var hints = {
 }
 var hintsK = underscore.keys(hints)
 
-var dnsTxtResolver = async function (domain) {
+var dnsTxtResolver = async (domain) => {
   return new Promise((resolve, reject) => {
     dns.resolveTxt(domain, (err, rrset) => {
       if (err) return reject(err)
@@ -533,7 +533,7 @@ var dnsTxtResolver = async function (domain) {
   })
 }
 
-var webResolver = async function (debug, runtime, publisher, path) {
+var webResolver = async (debug, runtime, publisher, path) => {
   debug('webResolver', { publisher: publisher, path: path })
   try {
     debug('webResolver', 'https://' + publisher + path)
@@ -553,7 +553,7 @@ var webResolver = async function (debug, runtime, publisher, path) {
  */
 }
 
-var verified = async function (request, reply, runtime, entry, verified, backgroundP, reason) {
+var verified = async (request, reply, runtime, entry, verified, backgroundP, reason) => {
   var message, payload, state
   var indices = underscore.pick(entry, [ 'verificationId', 'publisher' ])
   var debug = braveHapi.debug(module, request)
@@ -589,7 +589,7 @@ var verified = async function (request, reply, runtime, entry, verified, backgro
 
 v1.verifyToken = {
   handler: (runtime) => {
-    return async function (request, reply) {
+    return async (request, reply) => {
       var data, entry, entries, hint, i, info, j, matchP, pattern, reason, rr, rrset
       var publisher = request.params.publisher
       var backgroundP = request.query.backgroundP
@@ -616,7 +616,7 @@ v1.verifyToken = {
       }
       for (i = 0; i < rrset.length; i++) { rrset[i] = rrset[i].join('') }
 
-      var loser = async function (reason) {
+      var loser = async (reason) => {
         debug('verify', underscore.extend(info, { reason: reason }))
         await verified(request, reply, runtime, entry, false, backgroundP, reason)
       }
@@ -694,7 +694,7 @@ v1.verifyToken = {
   }
 }
 
-var publish = async function (debug, runtime, method, publisher, endpoint, payload) {
+var publish = async (debug, runtime, method, publisher, endpoint, payload) => {
   var message, result
 
   try {
@@ -715,7 +715,7 @@ var publish = async function (debug, runtime, method, publisher, endpoint, paylo
   return message
 }
 
-var notify = async function (debug, runtime, publisher, payload) {
+var notify = async (debug, runtime, publisher, payload) => {
   var message = await publish(debug, runtime, 'post', publisher, '/notifications', payload)
 
   if (!message) return
@@ -738,7 +738,7 @@ module.exports.routes = [
   braveHapi.routes.async().delete().path('/v1/publishers/{publisher}').whitelist().config(v1.deletePublisher)
 ]
 
-module.exports.initialize = async function (debug, runtime) {
+module.exports.initialize = async (debug, runtime) => {
   var resolvers
 
   runtime.db.checkIndices(debug, [

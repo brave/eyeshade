@@ -22,7 +22,7 @@ exports.workers = {
     }
  */
   'publishers-contributions-exclude':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var file, i, entries, satoshis, state, vote
       var authority = payload.authority
       var excludeP = payload.exclude
@@ -78,7 +78,7 @@ exports.workers = {
     }
  */
   'publishers-contributions-prorata':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var fee, file, remainder, satoshis, summary, total, usd
       var authority = payload.authority
       var data = payload.settlement

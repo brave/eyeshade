@@ -65,8 +65,9 @@ Wallet.prototype.create = async function (prefix, label, keychains) {
         groupTags: [],
         excludeTags: []
       },
-      action: { type: 'deny' } }, function (err) {
-      if (err) debug('wallet setPolicyRule', { label: label, message: err.toString() })
+      action: { type: 'deny' }
+    }, function (err) {
+      if (err) debug('wallet setPolicyRule com.brave.limit.velocity.30d', { label: label, message: err.toString() })
     })
   })
 
@@ -156,14 +157,14 @@ var schema2 = Joi.object()
 
               }).unknown(true)
 
-var maintenance = async function (config, runtime) {
+var maintenance = async (config, runtime) => {
   var rates, result1, result2
   var timestamp = Math.round(underscore.now() / 1000)
   var prefix = timestamp + '.' + config.bitcoin_average.publicKey
   var suffix = crypto.createHmac('sha256', config.bitcoin_average.secretKey).update(prefix).digest('hex')
   var signature = prefix + '.' + suffix
 
-  var fetch = async function (url, props, schema) {
+  var fetch = async (url, props, schema) => {
     var result, validity
 
     result = await braveHapi.wreck.get(url, props)
@@ -231,7 +232,7 @@ module.exports = Wallet
 Wallet.providers = {}
 
 Wallet.providers.bitgo = {
-  balances: async function (info) {
+  balances: async (info) => {
     var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: info.address })
 
     return {
@@ -242,14 +243,14 @@ Wallet.providers.bitgo = {
     }
   },
 
-  submitTx: async function (info, signedTx) {
+  submitTx: async (info, signedTx) => {
     var details, i, result
     var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: info.address })
 
     result = await wallet.sendTransaction({ tx: signedTx })
 
 // courtesy of https://stackoverflow.com/questions/33289726/combination-of-async-function-await-settimeout#33292942
-    var timeout = function (msec) { return new Promise((resolve) => { setTimeout(resolve, msec) }) }
+    var timeout = (msec) => { return new Promise((resolve) => { setTimeout(resolve, msec) }) }
 
     for (i = 0; i < 5; i++) {
       try {
@@ -273,11 +274,11 @@ Wallet.providers.bitgo = {
     return result
   },
 
-  transferP: function (info) {
+  transferP: (info) => {
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
-  transfer: async function (info, satoshis) {
+  transfer: async (info, satoshis) => {
     var balance, currencies, remaining, result, wallet
 
     if (!this.config.bitgo.fundingAddress) throw new Error('no funding address configured')
@@ -311,7 +312,7 @@ Wallet.providers.bitgo = {
     }
   },
 
-  unsignedTx: async function (info, amount, currency, balance) {
+  unsignedTx: async (info, amount, currency, balance) => {
     var desired, i, minimum, transaction, wallet
     var estimate = await this.bitgo.estimateFee({ numBlocks: 6 })
     var fee = estimate.feePerKb
@@ -351,7 +352,7 @@ Wallet.providers.bitgo = {
 }
 
 Wallet.providers.coinbase = {
-  purchaseBTC: function (info, amount, currency) {
+  purchaseBTC: (info, amount, currency) => {
     // TBD: for the moment...
     if (currency !== 'USD') throw new Error('currency ' + currency + ' payment not supported')
 
@@ -363,7 +364,7 @@ Wallet.providers.coinbase = {
     })
   },
 
-  recurringBTC: function (info, amount, currency) {
+  recurringBTC: (info, amount, currency) => {
     // TBD: for the moment...
     if (currency !== 'USD') throw new Error('currency ' + currency + ' payment not supported')
 

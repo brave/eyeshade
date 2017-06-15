@@ -12,7 +12,7 @@ if (!currency) currency = { digits: 2 }
 var datefmt = 'yyyymmdd-HHMMss'
 var datefmt2 = 'yyyymmdd-HHMMss-l'
 
-var create = async function (runtime, prefix, params) {
+var create = async (runtime, prefix, params) => {
   var extension, filename, options
 
   if (params.format === 'json') {
@@ -27,7 +27,7 @@ var create = async function (runtime, prefix, params) {
   return runtime.db.file(params.reportId, 'w', options)
 }
 
-var daily = async function (debug, runtime) {
+var daily = async (debug, runtime) => {
   var midnight, tomorrow
   var now = underscore.now()
 
@@ -49,7 +49,7 @@ var daily = async function (debug, runtime) {
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
 }
 
-var hourly = async function (debug, runtime) {
+var hourly = async (debug, runtime) => {
   var next
   var now = underscore.now()
 
@@ -66,12 +66,12 @@ var hourly = async function (debug, runtime) {
   debug('hourly', 'running again ' + moment(next).fromNow())
 }
 
-var quanta = async function (debug, runtime, age) {
+var quanta = async (debug, runtime, age) => {
   var i, match, results, votes
   var contributions = runtime.db.get('contributions', debug)
   var voting = runtime.db.get('voting', debug)
 
-  var dicer = async function (quantum, counts) {
+  var dicer = async (quantum, counts) => {
     var params, state, updateP, vote
     var surveyors = runtime.db.get('surveyors', debug)
     var surveyor = await surveyors.findOne({ surveyorId: quantum._id })
@@ -157,11 +157,11 @@ var quanta = async function (debug, runtime, age) {
   }))
 }
 
-var mixer = async function (debug, runtime, publisher, age) {
+var mixer = async (debug, runtime, publisher, age) => {
   var i, results
   var publishers = {}
 
-  var slicer = async function (quantum) {
+  var slicer = async (quantum) => {
     var fees, i, satoshis, slice, state
     var voting = runtime.db.get('voting', debug)
     var slices = await voting.find({ surveyorId: quantum.surveyorId, exclude: false })
@@ -328,7 +328,7 @@ var publisherSettlements = (runtime, entries, format, summaryP, usd) => {
 
 var exports = {}
 
-exports.initialize = async function (debug, runtime) {
+exports.initialize = async (debug, runtime) => {
   if ((typeof process.env.DYNO === 'undefined') || (process.env.DYNO === 'worker.1')) {
     setTimeout(() => { daily(debug, runtime) }, 5 * 1000)
     setTimeout(() => { hourly(debug, runtime) }, 30 * 1000)
@@ -358,7 +358,7 @@ exports.workers = {
     }
  */
   'report-publishers-contributions':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var data, entries, file, info, match, previous, publishers, usd
       var authority = payload.authority
       var authorized = payload.authorized
@@ -464,7 +464,7 @@ exports.workers = {
     }
  */
   'report-publishers-settlements':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var data, entries, file, info, usd
       var authority = payload.authority
       var format = payload.format || 'csv'
@@ -520,7 +520,7 @@ exports.workers = {
     }
  */
   'report-publishers-statements':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var data, data1, data2, file, entries, publishers, query, usd
       var authority = payload.authority
       var hash = payload.hash
@@ -611,7 +611,7 @@ exports.workers = {
     }
  */
   'report-publishers-status':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var data, entries, f, fields, file, i, keys, now, results, satoshis, summary, usd
       var authority = payload.authority
       var format = payload.format || 'csv'
@@ -691,7 +691,7 @@ exports.workers = {
       })
       usd = runtime.wallet.rates.USD
 
-      f = async function (publisher) {
+      f = async (publisher) => {
         var datum, datum2, result
 
         results[publisher].satoshis = satoshis[publisher] || 0
@@ -812,7 +812,7 @@ exports.workers = {
     }
  */
   'report-surveyors-contributions':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var data, fields, file, i, previous, results, slices, publishers, quantum
       var authority = payload.authority
       var format = payload.format || 'csv'

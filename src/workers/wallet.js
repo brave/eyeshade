@@ -3,7 +3,7 @@ var underscore = require('underscore')
 
 var exports = {}
 
-exports.initialize = async function (debug, runtime) {
+exports.initialize = async (debug, runtime) => {
   runtime.db.checkIndices(debug, [
     {
       category: runtime.db.get('wallets', debug),
@@ -101,7 +101,7 @@ exports.workers = {
     }
  */
   'persona-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var state
       var paymentId = payload.paymentId
       var wallets = runtime.db.get('wallets', debug)
@@ -127,7 +127,7 @@ exports.workers = {
     }
  */
   'surveyor-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var state
       var surveyorId = payload.surveyorId
       var surveyors = runtime.db.get('surveyors', debug)
@@ -156,7 +156,7 @@ exports.workers = {
     }
  */
   'contribution-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var state
       var paymentId = payload.paymentId
       var viewingId = payload.viewingId
@@ -183,7 +183,7 @@ exports.workers = {
 }
  */
   'voting-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var state
       var publisher = payload.publisher
       var surveyorId = payload.surveyorId
@@ -209,7 +209,7 @@ exports.workers = {
     }
  */
   'wallet-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var state
       var paymentId = payload.paymentId
       var wallets = runtime.db.get('wallets', debug)

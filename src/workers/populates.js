@@ -25,7 +25,7 @@ var exports = {}
 var oneHundredTwentyFourDays = 124 * 24 * 60 * 60 * 1000
 exports.oneHundredTwentyFourDays = oneHundredTwentyFourDays
 
-exports.initialize = async function (debug, runtime) {
+exports.initialize = async (debug, runtime) => {
   runtime.db.checkIndices(debug, [
     {
       category: runtime.db.get('populates', debug),
@@ -73,7 +73,7 @@ exports.workers = {
     }
  */
   'population-report':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var entry, file, reportURL, result, state, wallet
       var address = payload.address
       var satoshis = payload.satoshis
@@ -138,7 +138,7 @@ exports.workers = {
     }
  */
   'population-update':
-    async function (debug, runtime, payload) {
+    async (debug, runtime, payload) => {
       var entry, state
       var address = payload.address
       var eventId = payload.eventId
@@ -165,9 +165,10 @@ exports.workers = {
     }
 }
 
-var notify = async function (debug, runtime, address, type, payload) {
+var notify = async (debug, runtime, address, type, payload) => {
   var result
 
+  debug('notify', { address: address, type: type, payload: payload })
   try {
     result = await braveHapi.wreck.post(runtime.config.funding.url + '/v1/notifications/' + encodeURIComponent(address) +
                                         '?type=' + type,
@@ -189,7 +190,7 @@ var notify = async function (debug, runtime, address, type, payload) {
 }
 exports.notify = notify
 
-var holdover = async function (debug, runtime, paymentId, satoshis) {
+var holdover = async (debug, runtime, paymentId, satoshis) => {
   var entry
   var populates = runtime.db.get('populates', debug)
 

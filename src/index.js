@@ -104,7 +104,7 @@ server.register(
         }
       }
     }
-  ], function (err) {
+  ], (err) => {
   if (err) {
     debug('unable to register extensions', err)
     throw err
@@ -134,7 +134,7 @@ server.register(
   server.auth.strategy('simple', 'bearer-access-token', {
     allowQueryToken: true,
     allowMultipleHeaders: false,
-    validateFunc: function (token, callback) {
+    validateFunc: (token, callback) => {
       var tokenlist = process.env.TOKEN_LIST && process.env.TOKEN_LIST.split(',')
 
       callback(null, ((!tokenlist) || (tokenlist.indexOf(token) !== -1)), { token: token }, null)
@@ -142,7 +142,7 @@ server.register(
   })
 })
 
-server.ext('onRequest', function (request, reply) {
+server.ext('onRequest', (request, reply) => {
   if (request.headers['x-request-id']) request.id = request.headers['x-request-id']
   debug('begin', {
     sdebug: {
@@ -161,7 +161,7 @@ server.ext('onRequest', function (request, reply) {
   return reply.continue()
 })
 
-server.ext('onPreResponse', function (request, reply) {
+server.ext('onPreResponse', (request, reply) => {
   var response = request.response
 
   if ((!response.isBoom) || (response.output.statusCode !== 401)) {
@@ -175,11 +175,11 @@ server.ext('onPreResponse', function (request, reply) {
   }
 })
 
-server.on('log', function (event, tags) {
+server.on('log', (event, tags) => {
   debug(event.data, { tags: tags })
-}).on('request', function (request, event, tags) {
+}).on('request', (request, event, tags) => {
   debug(event.data, { tags: tags }, { sdebug: { request: { id: event.request, internal: event.internal } } })
-}).on('response', function (request) {
+}).on('response', (request) => {
   var flattened
   var logger = request._logger || []
   var params = {
@@ -218,7 +218,7 @@ server.on('log', function (event, tags) {
   debug('end', { sdebug: params })
 })
 
-var main = async function (id) {
+var main = async (id) => {
   var routing = await routes.routes(debug, runtime)
 
   server.route(routing)
@@ -229,7 +229,7 @@ var main = async function (id) {
     server.route({
       method: 'GET',
       path: '/.well-known/acme-challenge/' + process.env.ACME_CHALLENGE.split('.')[0],
-      handler: function (request, reply) { reply(process.env.ACME_CHALLENGE) }
+      handler: (request, reply) => { reply(process.env.ACME_CHALLENGE) }
     })
   }
   // automated fishing expeditions shouldn't result in devops alerts...
