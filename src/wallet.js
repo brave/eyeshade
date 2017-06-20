@@ -276,9 +276,11 @@ Wallet.providers.bitgo = {
   },
 
   transferP: (info) => {
+    console.log('transferP...')
     try {
       console.log(JSON.stringify(this, null, 2))
     } catch (ex) { console.log(ex.toString()) }
+    console.log('...transferP')
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
