@@ -98,6 +98,7 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
 }
 
 Wallet.prototype.transferP = function (info) {
+  console.log(underscore.keys(this))
   var f = Wallet.providers[info.provider].transferP
 
   return ((!!f) && (f.bind(this)(info)))
@@ -275,6 +276,8 @@ Wallet.providers.bitgo = {
   },
 
   transferP: (info) => {
+    console.log(underscore.keys(this))
+    if (this.config) console.log(underscore.keys(this.config))
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
