@@ -86,6 +86,7 @@ exports.workers = {
       wallet = await wallets.findOne({ address: address })
       if (!wallet) throw new Error('no such wallet address: ' + address)
 
+      console.log(underscore.keys(runtime.wallet))
       if (runtime.wallet.transferP.bind(runtime.wallet)(wallet)) {
         try {
           payload.fiatFee = payload.fee
