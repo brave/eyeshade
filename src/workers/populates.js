@@ -86,10 +86,10 @@ exports.workers = {
       wallet = await wallets.findOne({ address: address })
       if (!wallet) throw new Error('no such wallet address: ' + address)
 
-      if (runtime.wallet.transferP(wallet)) {
+      if (runtime.wallet.transferP.bind(runtime.wallet)(wallet)) {
         try {
           payload.fiatFee = payload.fee
-          result = await runtime.wallet.transfer(wallet, satoshis)
+          result = await runtime.wallet.transfer.bind(runtime.wallet)(wallet, satoshis)
           state = {
             $currentDate: { timestamp: { $type: 'timestamp' } },
             $set: underscore.defaults(underscore.pick(result, [ 'hash', 'fee' ]), {
