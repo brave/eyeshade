@@ -98,14 +98,12 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
 }
 
 Wallet.prototype.transferP = function (info) {
-  console.log('pre transferP: ' + JSON.stringify(this.config, null, 2))
   var f = Wallet.providers[info.provider].transferP
 
   return ((!!f) && (f.bind(this)(info)))
 }
 
 Wallet.prototype.transfer = async function (info, satoshis) {
-  console.log('pre transfer: ' + JSON.stringify(this.config, null, 2))
   var f = Wallet.providers[info.provider].transfer
 
   if (!f) throw new Error('provider ' + info.provider + ' transfer not supported')
@@ -277,12 +275,10 @@ Wallet.providers.bitgo = {
   },
 
   transferP: function (info) {
-    console.log('post transferP: ' + JSON.stringify(this.config, null, 2))
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
   transfer: async function (info, satoshis) {
-    console.log('post transfer: ' + JSON.stringify(this.config, null, 2))
     var balance, currencies, remaining, result, wallet
 
     if (!this.config.bitgo.fundingAddress) throw new Error('no funding address configured')
