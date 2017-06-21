@@ -98,15 +98,14 @@ Wallet.prototype.recurringBTC = function (info, amount, currency) {
 }
 
 Wallet.prototype.transferP = function (info) {
+  console.log('pre transferP: ' + JSON.stringify(this.config, null, 2))
   var f = Wallet.providers[info.provider].transferP
-
-  console.log('pre transferP')
-  for (var property in this) console.log(property + ': ' + JSON.stringify(this[property], null, 2))
 
   return ((!!f) && (f.bind(this)(info)))
 }
 
 Wallet.prototype.transfer = async function (info, satoshis) {
+  console.log('pre transfer: ' + JSON.stringify(this.config, null, 2))
   var f = Wallet.providers[info.provider].transfer
 
   if (!f) throw new Error('provider ' + info.provider + ' transfer not supported')
@@ -235,7 +234,7 @@ module.exports = Wallet
 Wallet.providers = {}
 
 Wallet.providers.bitgo = {
-  balances: async (info) => {
+  balances: async function (info) {
     var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: info.address })
 
     return {
@@ -246,7 +245,7 @@ Wallet.providers.bitgo = {
     }
   },
 
-  submitTx: async (info, signedTx) => {
+  submitTx: async function (info, signedTx) {
     var details, i, result
     var wallet = await this.bitgo.wallets().get({ type: 'bitcoin', id: info.address })
 
@@ -277,14 +276,13 @@ Wallet.providers.bitgo = {
     return result
   },
 
-  transferP: (info) => {
-    console.log('post transferP')
-    for (var property in this) console.log(property + ': ' + JSON.stringify(this[property], null, 2))
-
+  transferP: function (info) {
+    console.log('post transferP: ' + JSON.stringify(this.config, null, 2))
     return ((!!this.config.bitgo.fundingAddress) && (!!this.config.bitgo.fundingPassphrase))
   },
 
-  transfer: async (info, satoshis) => {
+  transfer: async function (info, satoshis) {
+    console.log('post transfer: ' + JSON.stringify(this.config, null, 2))
     var balance, currencies, remaining, result, wallet
 
     if (!this.config.bitgo.fundingAddress) throw new Error('no funding address configured')
@@ -318,7 +316,7 @@ Wallet.providers.bitgo = {
     }
   },
 
-  unsignedTx: async (info, amount, currency, balance) => {
+  unsignedTx: async function (info, amount, currency, balance) {
     var desired, i, minimum, transaction, wallet
     var estimate = await this.bitgo.estimateFee({ numBlocks: 6 })
     var fee = estimate.feePerKb
@@ -358,7 +356,7 @@ Wallet.providers.bitgo = {
 }
 
 Wallet.providers.coinbase = {
-  purchaseBTC: (info, amount, currency) => {
+  purchaseBTC: function (info, amount, currency) {
     // TBD: for the moment...
     if (currency !== 'USD') throw new Error('currency ' + currency + ' payment not supported')
 
@@ -370,7 +368,7 @@ Wallet.providers.coinbase = {
     })
   },
 
-  recurringBTC: (info, amount, currency) => {
+  recurringBTC: function (info, amount, currency) {
     // TBD: for the moment...
     if (currency !== 'USD') throw new Error('currency ' + currency + ' payment not supported')
 
