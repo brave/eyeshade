@@ -533,7 +533,7 @@ exports.workers = {
         entries = await settlements.find({ publisher: publisher })
         publishers = await mixer(debug, runtime, publisher)
       } else {
-        entries = await settlements.find({ hash: hash })
+        entries = await settlements.find(hash ? { hash: hash } : {})
         if (rollupP) {
           query = { $or: [] }
           entries.forEach((entry) => { query.$or.push({ publisher: entry.publisher }) })

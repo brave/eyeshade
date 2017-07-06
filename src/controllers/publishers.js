@@ -67,7 +67,7 @@ v1.exclude = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -122,7 +122,7 @@ v1.exclusion = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -257,7 +257,8 @@ v1.getBalance = {
     params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
     query: {
       currency: braveJoi.string().currencyCode().optional().default('USD').description('the fiat currency'),
-      access_token: Joi.string().guid().optional() }
+      access_token: Joi.string().guid().optional()
+    }
   },
 
   response: {

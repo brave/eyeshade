@@ -93,7 +93,7 @@ v1.publisher.contributions = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -146,7 +146,7 @@ v1.publishers.contributions = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -190,7 +190,7 @@ v1.publisher.settlements = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -228,7 +228,7 @@ v1.publishers.settlements = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -236,6 +236,7 @@ v1.publishers.settlements = {
 /*
    GET /v1/reports/publisher/{publisher}/statements
    GET /v1/reports/publishers/statements/{hash}
+   GET /v2/reports/publishers/statements
  */
 
 v1.publisher.statements = {
@@ -269,7 +270,7 @@ v1.publisher.statements = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -309,7 +310,46 @@ v1.publishers.statements = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
+    }).unknown(true)
+  }
+}
+
+v2.publishers.statements = {
+  handler: (runtime) => {
+    return async (request, reply) => {
+      var authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+
+      var reportId = uuid.v4().toLowerCase()
+      var reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      var debug = braveHapi.debug(module, request)
+
+      await runtime.queue.send(debug, 'report-publishers-statements',
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   request.query))
+      reply({ reportURL: reportURL })
+    }
+  },
+
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
+
+  description: 'Returns statements for all publishers',
+  tags: [ 'api' ],
+
+  validate: {
+    query: {
+      rollup: Joi.boolean().optional().default(true).description('include all settlements for associated publishers'),
+      summary: Joi.boolean().optional().default(false).description('summarize report')
+    }
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -354,7 +394,7 @@ v1.publishers.status = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -393,7 +433,7 @@ v2.publishers.status = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -437,7 +477,7 @@ v1.surveyors.contributions = {
 
   response: {
     schema: Joi.object().keys({
-      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for an forthcoming report')
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
     }).unknown(true)
   }
 }
@@ -450,6 +490,7 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/reports/publishers/settlements').config(v1.publishers.settlements),
   braveHapi.routes.async().path('/v1/reports/publisher/{publisher}/statements').config(v1.publisher.statements),
   braveHapi.routes.async().path('/v1/reports/publishers/statements/{hash}').config(v1.publishers.statements),
+  braveHapi.routes.async().path('/v2/reports/publishers/statements').config(v2.publishers.statements),
   braveHapi.routes.async().path('/v1/reports/publishers/status').config(v1.publishers.status),
   braveHapi.routes.async().path('/v2/reports/publishers/status').config(v2.publishers.status),
   braveHapi.routes.async().path('/v1/reports/surveyors/contributions').config(v1.surveyors.contributions)
