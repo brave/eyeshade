@@ -173,6 +173,8 @@ server.ext('onPreResponse', (request, reply) => {
     request.cookieAuth.clear()
     reply.redirect('/v1/login')
   }
+
+  return reply.continue()
 })
 
 server.on('log', (event, tags) => {
