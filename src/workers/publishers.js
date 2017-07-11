@@ -9,7 +9,9 @@ if (!currency) currency = { digits: 2 }
 var exports = {}
 
 exports.workers = {
-/* sent by POST /v1/publishers/contributions/exclude
+/* BEGIN: EXPERIMENTAL/DEPRECATED */
+
+/*   sent by POST /v1/publishers/contributions/exclude
 
     { queue            : 'publishers-contributions-exclude'
     , message          :
@@ -147,5 +149,6 @@ exports.workers = {
       })
     }
 }
+/* END: EXPERIMENTAL/DEPRECATED */
 
 module.exports = exports
