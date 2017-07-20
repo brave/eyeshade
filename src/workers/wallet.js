@@ -72,20 +72,13 @@ exports.initialize = async (debug, runtime) => {
         timestamp: bson.Timestamp.ZERO,
         // added by administrator
         exclude: false,
-/* BEGIN: EXPERIMENTAL/DEPRECATED */
-        exclusionId: '',
-/* END: EXPERIMENTAL/DEPRECATED */
         hash: '',
         // added during report runs...
         satoshis: 0
       },
       unique: [ { surveyorId: 1, publisher: 1 } ],
       others: [ { counts: 1 }, { timestamp: 1 },
-                { exclude: 1 },
-/* BEGIN: EXPERIMENTAL/DEPRECATED */
-                { exclusionId: 1 },
-/* END: EXPERIMENTAL/DEPRECATED */
-                { hash: 1 },
+                { exclude: 1 }, { hash: 1 },
                 { satoshis: 1 } ]
     }
   ])
