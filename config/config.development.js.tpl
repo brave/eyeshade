@@ -11,17 +11,11 @@ module.exports =
     { accessToken       : process.env.BITGO_TOKEN
     , enterpriseId      : process.env.BITGO_ENTERPRISE_ID
     , environment       : process.env.BITGO_ENVIRONMENT
-    , fundingAddress    : process.env.BITGO_FUNDING_ADDRESS
-    , fundingPassphrase : process.env.BITGO_FUNDING_PASSPHRASE
     }
   , bitcoin_average     :
     { publicKey         : process.env.BITCOIN_AVERAGE_PUBLIC_KEY
     , secretKey         : process.env.BITCOIN_AVERAGE_SECRET_KEY
     }
-  }
-, funding               :
-  { url                 : process.env.FUNDING_URL
-  , access_token        : process.env.FUNDING_TOKEN
   }
 , publishers            :
   { url                 : process.env.PUBLISHERS_URL
