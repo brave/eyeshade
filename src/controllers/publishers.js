@@ -1,3 +1,5 @@
+// TODO: replace satoshis
+
 var boom = require('boom')
 var braveHapi = require('../brave-hapi')
 var braveJoi = require('../brave-joi')
@@ -9,6 +11,7 @@ var Joi = require('joi')
 var underscore = require('underscore')
 
 var v1 = {}
+var v2 = {}
 var prefix = 'brave-ledger-verification='
 
 /*
@@ -163,7 +166,7 @@ v1.getStatus = {
       entry = await publishers.findOne({ publisher: publisher })
       if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
 
-      reply(underscore.pick(entry, [ 'address', 'authorized' ]))
+      reply(underscore.pick(entry, [ 'authorized', 'address', 'provider' ]))
     }
   },
 
@@ -182,8 +185,9 @@ v1.getStatus = {
 
   response: {
     schema: Joi.object().keys({
-      address: braveJoi.string().base58().optional().description('BTC address'),
-      authorized: Joi.boolean().optional().description('authorized for settlements')
+      authorized: Joi.boolean().optional().description('authorized for settlements'),
+      provider: Joi.string().hostname().optional().description('wallet provider'),
+      address: braveJoi.string().base58().optional().description('BTC address')
     }).unknown(true).description('the publisher status')
   }
 }
@@ -287,6 +291,61 @@ v1.setWallet = {
 }
 
 /*
+   PUT /v2/publishers/{publisher}/wallet
+ */
+
+v2.setWallet = {
+  handler: (runtime) => {
+    return async (request, reply) => {
+      var entry, state
+      var publisher = request.params.publisher
+      var parameters = request.payload.parameters
+      var provider = request.payload.provider
+      var verificationId = request.payload.verificationId
+      var debug = braveHapi.debug(module, request)
+      var publishers = runtime.db.get('publishers', debug)
+      var tokens = runtime.db.get('tokens', debug)
+
+      entry = await tokens.findOne({ verificationId: verificationId, publisher: publisher })
+      if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+
+      if (!entry.verified) return reply(boom.badData('not verified: ' + publisher + ' using ' + verificationId))
+
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { provider: provider, parameters: parameters }
+      }
+      await publishers.update({ publisher: publisher }, state, { upsert: true })
+
+// TODO: fetch ETH address
+
+      reply({})
+    }
+  },
+
+  auth: {
+    strategy: 'simple',
+    mode: 'required'
+  },
+
+  description: 'Sets the wallet provider for a publisher',
+  tags: [ 'api' ],
+
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    query: { access_token: Joi.string().guid().optional() },
+    payload: {
+      verificationId: Joi.string().guid().required().description('identity of the requestor'),
+      provider: Joi.string().hostname().required().description('wallet provider'),
+      parameters: Joi.object().required().description('wallet parameters')
+    }
+  },
+
+  response:
+    { schema: Joi.object().length(0) }
+}
+
+/*
    PATCH /v1/publishers/{publisher}
  */
 
@@ -345,6 +404,56 @@ v1.patchPublisher = {
       authorized: Joi.boolean().optional().default(false).description('authorize the publisher'),
       legalFormURL: braveJoi.string().uri({ scheme: [ /https?/, 'void' ] }).optional().description('S3 URL'),
       reason: Joi.string().trim().optional().description('explanation for notification')
+    }
+  },
+
+  response:
+    { schema: Joi.object().length(0) }
+}
+
+/*
+   PATCH /v2/publishers/{publisher}
+ */
+
+v2.patchPublisher = {
+  handler: (runtime) => {
+    return async (request, reply) => {
+      var authority, entry, state
+      var publisher = request.params.publisher
+      var payload = request.payload
+      var authorized = payload.authorized
+      var debug = braveHapi.debug(module, request)
+      var publishers = runtime.db.get('publishers', debug)
+
+      entry = await publishers.findOne({ publisher: publisher })
+      if (!entry) return reply(boom.notFound('no such entry: ' + publisher))
+
+      authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: underscore.extend(payload, { authority: authority })
+      }
+      await publishers.update({ publisher: publisher }, state, { upsert: true })
+
+      if (authorized) await notify(debug, runtime, publisher, { type: 'payments_activated' })
+
+      reply({})
+    }
+  },
+
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
+
+  description: 'Sets the authorization state for the publisher',
+  tags: [ 'api' ],
+
+  validate: {
+    params: { publisher: braveJoi.string().publisher().required().description('the publisher identity') },
+    payload: {
+      authorized: Joi.boolean().optional().default(false).description('authorize the publisher')
     }
   },
 
@@ -610,8 +719,10 @@ module.exports.routes = [
   braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verifications/{verificationId}').whitelist().config(v1.getToken),
   braveHapi.routes.async().put().path('/v1/publishers/{publisher}/wallet').whitelist().config(v1.setWallet),
+  braveHapi.routes.async().put().path('/v2/publishers/{publisher}/wallet').whitelist().config(v2.setWallet),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/verify').config(v1.verifyToken),
   braveHapi.routes.async().patch().path('/v1/publishers/{publisher}').whitelist().config(v1.patchPublisher),
+  braveHapi.routes.async().patch().path('/v2/publishers/{publisher}').whitelist().config(v2.patchPublisher),
   braveHapi.routes.async().delete().path('/v1/publishers/{publisher}').whitelist().config(v1.deletePublisher)
 ]
 
@@ -626,14 +737,29 @@ module.exports.initialize = async (debug, runtime) => {
       empty: {
         publisher: '',
         verified: false,
-        address: '',
-        legalFormURL: '',
         authorized: false,
         authority: '',
+        address: '',
+
+     // v1 only
+        legalFormURL: '',
+
+     // v2 only
+        provider: '',
+        parameters: {},
+
         timestamp: bson.Timestamp.ZERO
       },
       unique: [ { publisher: 1 } ],
-      others: [ { verified: 1 }, { address: 1 }, { legalFormURL: 1 }, { authorized: 1 }, { authority: 1 }, { timestamp: 1 } ]
+      others: [ { verified: 1 }, { authorized: 1 }, { authority: 1 }, { address: 1 },
+
+             // v1 only
+                { legalFormURL: 1 },
+
+             // v2 only
+                { provider: 1 },
+
+                { timestamp: 1 } ]
     },
     {
       category: runtime.db.get('settlements', debug),
