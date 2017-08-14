@@ -11,15 +11,15 @@ exports.initialize = async (debug, runtime) => {
       property: 'paymentId',
       empty: {
         paymentId: '',
-        provider: '',
         address: '',
+        provider: '',
         balances: {},
         keychains: {},
         paymentStamp: 0,
         timestamp: bson.Timestamp.ZERO
       },
       unique: [ { paymentId: 1 } ],
-      others: [ { provider: 1 }, { address: 1 }, { paymentStamp: 1 }, { timestamp: 1 } ]
+      others: [ { address: 1 }, { provider: 1 }, { paymentStamp: 1 }, { timestamp: 1 } ]
     },
     {
       category: runtime.db.get('surveyors', debug),
@@ -32,7 +32,7 @@ exports.initialize = async (debug, runtime) => {
         votes: 0,
         counts: 0,
         timestamp: bson.Timestamp.ZERO,
-     // added during report runs...
+        // added during report runs...
         inputs: 0,
         fee: 0,
         quantum: 0
@@ -70,10 +70,10 @@ exports.initialize = async (debug, runtime) => {
         publisher: '',
         counts: 0,
         timestamp: bson.Timestamp.ZERO,
-     // added by administrator
+        // added by administrator
         exclude: false,
         hash: '',
-     // added during report runs...
+        // added during report runs...
         satoshis: 0
       },
       unique: [ { surveyorId: 1, publisher: 1 } ],
@@ -90,8 +90,8 @@ exports.workers = {
     { queue            : 'persona-report'
     , message          :
       { paymentId      : '...'
-      , provider       : 'bitgo'
       , address        : '...'
+      , provider       : 'bitgo'
       , keychains      :
         { user         : { xpub: '...', encryptedXprv: '...' }
         , backup       : { xpub: '...', encryptedXprv: '...' }

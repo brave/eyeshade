@@ -380,7 +380,7 @@ exports.workers = {
       entries.forEach((entry) => {
         if (typeof publishers[entry.publisher] === 'undefined') return
 
-        underscore.extend(publishers[entry.publisher], underscore.pick(entry, [ 'authorized', 'address', 'provider' ]))
+        underscore.extend(publishers[entry.publisher], underscore.pick(entry, [ 'authorized', 'address' ]))
       })
       entries = await tokens.find({ verified: true })
       entries.forEach((entry) => {
@@ -782,7 +782,7 @@ exports.workers = {
 
       fields = [ 'publisher', 'USD', 'satoshis',
         'verified', 'authorized', 'authority',
-        'name', 'email', 'phone', 'provider', 'address', 'showVerificationStatus',
+        'name', 'email', 'phone', 'address', 'showVerificationStatus',
         'verificationId', 'reason',
         'daysInQueue', 'created', 'modified',
         'token', 'legalFormURL' ]
