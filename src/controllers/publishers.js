@@ -7,9 +7,78 @@ var currencyCodes = require('currency-codes')
 var dns = require('dns')
 var Joi = require('joi')
 var underscore = require('underscore')
+var url = require('url')
+var uuid = require('uuid')
 
 var v1 = {}
-var prefix = 'brave-ledger-verification='
+
+var prefix1 = 'brave-ledger-verification='
+var prefix2 = prefix1 + '='
+
+/*
+   POST /v1/publishers
+*/
+
+v1.bulk = {
+  handler: (runtime) => {
+    return async (request, reply) => {
+      const payload = request.payload
+      const authority = request.auth.credentials.provider + ':' + request.auth.credentials.profile.username
+      const reportId = uuid.v4().toLowerCase()
+      const reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
+      const debug = braveHapi.debug(module, request)
+      const publishers = runtime.database.get('publishers', debug)
+      const tokens = runtime.database.get('tokens', debug)
+      let publisher, state, token
+
+      for (let entry of payload) {
+        publisher = await publishers.findOne({ publisher: entry.publisher, verified: true })
+        if (publisher) return reply(boom.badData('publisher ' + entry.publisher + ' already verified'))
+      }
+
+      state = {
+        $currentDate: { timestamp: { $type: 'timestamp' } },
+        $set: { verified: true, reason: 'bulk loaded', authority: authority }
+      }
+      for (let entry of payload) {
+        token = uuid.v4().toLowerCase()
+        underscore.extend(state.$set, { verificationId: token, token: token })
+        await tokens.update({ publisher: entry.publisher }, state, { upsert: true })
+      }
+
+      await runtime.queue.send(debug, 'publishers-bulk-create',
+                               underscore.defaults({ reportId: reportId, reportURL: reportURL, authority: authority },
+                                                   { publishers: payload }, request.query))
+      reply({ reportURL: reportURL })
+    }
+  },
+
+  auth: {
+    strategy: 'session',
+    scope: [ 'ledger' ],
+    mode: 'required'
+  },
+
+  description: 'Creates publisher entries in bulk',
+  tags: [ 'api' ],
+
+  validate: {
+    query: { format: Joi.string().valid('json', 'csv').optional().default('json').description('the format of the report') },
+    payload: Joi.array().min(1).items(Joi.object().keys({
+      publisher: braveJoi.string().publisher().required().description('the publisher identity'),
+      name: Joi.string().min(1).max(40).required().description('contact name'),
+      email: Joi.string().email().required().description('contact email'),
+      phone: Joi.string().regex(/^\+(?:[0-9][ -]?){6,14}[0-9]$/).required().description('contact phone number'),
+      show_verification_status: Joi.boolean().optional().default(true).description('authorizes display')
+    }).unknown(true)).required().description('publisher settlement report')
+  },
+
+  response: {
+    schema: Joi.object().keys({
+      reportURL: Joi.string().uri({ scheme: /https?/ }).optional().description('the URL for a forthcoming report')
+    }).unknown(true)
+  }
+}
 
 /*
    POST /v1/publishers/settlement/{hash}
@@ -508,18 +577,18 @@ v1.verifyToken = {
 
         for (j = 0; j < rrset.length; j++) {
           rr = rrset[j]
-          if (rr.indexOf(prefix) !== 0) continue
+          if (rr.indexOf(prefix2) !== 0) continue
 
           matchP = true
-          if (rr.substring(prefix.length) !== entry.token) {
-            await loser('TXT RR suffix mismatch ' + prefix + entry.token)
+          if (rr.substring(prefix2.length) !== entry.token) {
+            await loser('TXT RR suffix mismatch ' + prefix2 + entry.token)
             continue
           }
 
           return verified(request, reply, runtime, entry, true, backgroundP, 'TXT RR matches')
         }
         if (!matchP) {
-          if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix)
+          if (typeof matchP === 'undefined') await loser('no TXT RRs starting with ' + prefix2)
           matchP = false
         }
 
@@ -537,8 +606,8 @@ v1.verifyToken = {
           if (data[hint].indexOf(entry.token) !== -1) {
             switch (hint) {
               case root:
-                pattern = '<meta[^>]*?name=["\']+' + prefix + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
-                        '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix + '["\']+.*?>'
+                pattern = '<meta[^>]*?name=["\']+' + prefix1 + '["\']+content=["\']+' + entry.token + '["\']+.*?>|' +
+                        '<meta[^>]*?content=["\']+' + entry.token + '["\']+name=["\']+' + prefix1 + '["\']+.*?>'
                 if (!data[hint].match(pattern)) continue
                 break
 
@@ -605,6 +674,7 @@ var notify = async (debug, runtime, publisher, payload) => {
 }
 
 module.exports.routes = [
+  braveHapi.routes.async().post().path('/v1/publishers').config(v1.bulk),
   braveHapi.routes.async().post().path('/v1/publishers/settlement/{hash}').config(v1.settlement),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/balance').whitelist().config(v1.getBalance),
   braveHapi.routes.async().path('/v1/publishers/{publisher}/status').whitelist().config(v1.getStatus),
