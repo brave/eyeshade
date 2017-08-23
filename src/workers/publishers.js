@@ -1,4 +1,4 @@
-xgconst braveHapi = require('../brave-hapi')
+const braveHapi = require('../brave-hapi')
 const json2csv = require('json2csv')
 const underscore = require('underscore')
 
