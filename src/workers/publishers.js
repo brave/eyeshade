@@ -52,7 +52,7 @@ exports.workers = {
       const authority = payload.authority
       const format = payload.format || 'csv'
       const publishers = payload.publishers
-      const publishersC = runtime.database.get('publishers', debug)
+      const publishersC = runtime.db.get('publishers', debug)
       let file, result, state
 
       state = {

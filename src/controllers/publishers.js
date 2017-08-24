@@ -27,8 +27,8 @@ v1.bulk = {
       const reportId = uuid.v4().toLowerCase()
       const reportURL = url.format(underscore.defaults({ pathname: '/v1/reports/file/' + reportId }, runtime.config.server))
       const debug = braveHapi.debug(module, request)
-      const publishers = runtime.database.get('publishers', debug)
-      const tokens = runtime.database.get('tokens', debug)
+      const publishers = runtime.db.get('publishers', debug)
+      const tokens = runtime.db.get('tokens', debug)
       let publisher, state
 
       for (let entry of payload) {
