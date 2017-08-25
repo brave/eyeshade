@@ -12,7 +12,7 @@ var uuid = require('uuid')
 
 var v1 = {}
 
-var prefix1 = 'brave-ledger-verification='
+var prefix1 = 'brave-ledger-verification'
 var prefix2 = prefix1 + '='
 
 /*
