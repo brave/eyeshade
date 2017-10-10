@@ -219,7 +219,7 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
     if (summaryP) {
       publishers = []
       results.forEach((entry) => {
-        var lastxn, result
+        var result
 
         if (!entry.authorized) return
 
@@ -229,8 +229,6 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
         result.amount = (entry.satoshis * usd).toFixed(currency.digits)
         result.fee = (entry.fees * usd).toFixed(currency.digits)
         result.currency = 'USD'
-        lastxn = underscore.last(result.votes)
-        result.lastUpdated = lastxn && lastxn.created && dateformat(lastxn.created, datefmt)
         publishers.push(result)
       })
 
@@ -245,16 +243,19 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
 
   data = []
   results.forEach((result) => {
-    var datum
+    var datum, lastxn
 
     satoshis += result.satoshis
     fees += result.fees
+    if (summaryP) lastxn = underscore.last(result.votes)
+
     datum = {
       publisher: result.publisher,
       satoshis: result.satoshis,
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
-      'processor USD': (result.fees * usd).toFixed(currency.digits)
+      'processor USD': (result.fees * usd).toFixed(currency.digits),
+      lastUpdated: lastxn && lastxn.created && dateformat(lastxn.created, datefmt)
     }
     if (authority) {
       underscore.extend(datum,
