@@ -255,7 +255,7 @@ var publisherContributions = (runtime, publishers, authority, authorized, verifi
       fees: result.fees,
       'publisher USD': (result.satoshis * usd).toFixed(currency.digits),
       'processor USD': (result.fees * usd).toFixed(currency.digits),
-      lastUpdated: lastxn && lastxn.created && dateformat(lastxn.created, datefmt)
+      lastUpdated: lastxn && lastxn.lastUpdated && dateformat(lastxn.lastUpdated, datefmt)
     }
     if (authority) {
       underscore.extend(datum,
