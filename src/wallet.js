@@ -193,9 +193,9 @@ var maintenance = async (config, runtime) => {
   }
 
   try {
-    result2 = await fetch('http2://api.coindesk.com/v1/bpi/currentprice.json', {}, schema2)
+    result2 = await fetch('https://api.coindesk.com/v1/bpi/currentprice.json', {}, schema2)
   } catch (ex) {
-    return runtime.notify(debug, { text: 'maintenance error(2):: ' + ex.toString() })
+    return runtime.notify(debug, { text: 'maintenance error(2): ' + ex.toString() })
   }
 
   rates = {}
