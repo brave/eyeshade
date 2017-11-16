@@ -1,3 +1,4 @@
+# NOTE: This repo is deprecated, please see [bat-ledger](https://github.com/brave-intl/bat-ledger)
 # Brave Eyeshade
 ** NB: this repository is still undergoing active functional development.**
 
