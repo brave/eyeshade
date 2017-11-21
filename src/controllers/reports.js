@@ -76,7 +76,7 @@ v1.publisher.contributions = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -121,7 +121,7 @@ v1.publishers.contributions = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -169,7 +169,7 @@ v1.publisher.settlements = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -208,7 +208,7 @@ v1.publishers.settlements = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -252,7 +252,7 @@ v1.publisher.statements = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -289,7 +289,7 @@ v1.publishers.statements = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -329,7 +329,7 @@ v2.publishers.statements = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
@@ -457,7 +457,7 @@ v1.surveyors.contributions = {
 
   auth: {
     strategy: 'session',
-    scope: [ 'ledger' ],
+    scope: [ 'ledger', 'QA' ],
     mode: 'required'
   },
 
